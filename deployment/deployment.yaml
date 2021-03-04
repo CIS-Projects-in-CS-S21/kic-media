@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: kic
+  name: kic-media-service
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 9001
+  selector:
+    app: kic-media
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kic
+  name: kic-media
+spec:
+  selector:
+    matchLabels:
+      app: kic-media
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      namespace: kic
+      labels:
+        app: kic-media
+    spec:
+      containers:
+        - image: gcr.io/PROJECT_ID/IMAGE:TAG
+          name: kic-media
+          #volumeMounts:
+          #  - name: google-cloud-key
+          #    mountPath: /var/secrets/google
+          env:
+            - name: MONGO_URI
+              value: temp
+            - name: PRODUCTION
+              value: prod
+            #- name: GOOGLE_APPLICATION_CREDENTIALS
+            #  value: /var/secrets/google/key.json
+      #volumes:
+      #  - name: google-cloud-key
+      #    secret:
+      #      secretName: gcloud-key

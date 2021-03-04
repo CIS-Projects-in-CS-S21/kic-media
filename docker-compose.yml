@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  db:
+    image: mongo
+    ports:
+      - "27017:27017"
+  server:
+    build: .
+    environment:
+      - MONGO_URI=mongodb://db:27017
+      - PORT=9001
+    restart: on-failure
+    depends_on:
+      - db
+    ports:
+      - "9001:9001"
