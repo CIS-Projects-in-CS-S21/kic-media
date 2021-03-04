@@ -1,2 +1,2 @@
 resources:
-  - deployment/server.yml
+  - deployment/deployment.yml
