@@ -1,6 +1,5 @@
 package logging
 
-
 import (
 	"log"
 	"os"
@@ -12,7 +11,7 @@ import (
 // CreateLogger - Create a new logger instance
 func CreateLogger(level zapcore.Level) *zap.SugaredLogger {
 	var config zap.Config
-	//Setup Logging
+	// Setup Logging
 	if os.Getenv("prod") != "" {
 		config = zap.NewProductionConfig()
 	} else {
@@ -22,7 +21,6 @@ func CreateLogger(level zapcore.Level) *zap.SugaredLogger {
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	config.Level = zap.NewAtomicLevelAt(level)
 	loggerMgr, err := config.Build()
-
 	if err != nil {
 		log.Fatalf("Couldn't start zap logger: %v", err)
 	}
