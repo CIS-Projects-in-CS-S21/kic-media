@@ -4,6 +4,7 @@ package proto
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -71,8 +72,7 @@ type FeedServer interface {
 }
 
 // UnimplementedFeedServer must be embedded to have forward compatible implementations.
-type UnimplementedFeedServer struct {
-}
+type UnimplementedFeedServer struct{}
 
 func (UnimplementedFeedServer) GenerateFeedForUser(*GenerateFeedForUserRequest, Feed_GenerateFeedForUserServer) error {
 	return status.Errorf(codes.Unimplemented, "method GenerateFeedForUser not implemented")

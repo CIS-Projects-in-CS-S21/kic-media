@@ -12,7 +12,7 @@ import (
 func CreateLogger(level zapcore.Level) *zap.SugaredLogger {
 	var config zap.Config
 	// Setup Logging
-	if os.Getenv("prod") != "" {
+	if os.Getenv("PRODUCTION") != "" {
 		config = zap.NewProductionConfig()
 	} else {
 		config = zap.NewDevelopmentConfig()

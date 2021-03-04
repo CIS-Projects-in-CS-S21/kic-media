@@ -10,10 +10,11 @@
 package proto
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -276,13 +277,16 @@ func file_proto_common_proto_rawDescGZIP() []byte {
 	return file_proto_common_proto_rawDescData
 }
 
-var file_proto_common_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_proto_common_proto_goTypes = []interface{}{
-	(*User)(nil), // 0: kic.common.User
-	(*File)(nil), // 1: kic.common.File
-	(*Date)(nil), // 2: kic.common.Date
-	nil,          // 3: kic.common.File.MetadataEntry
-}
+var (
+	file_proto_common_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+	file_proto_common_proto_goTypes  = []interface{}{
+		(*User)(nil), // 0: kic.common.User
+		(*File)(nil), // 1: kic.common.File
+		(*Date)(nil), // 2: kic.common.Date
+		nil,          // 3: kic.common.File.MetadataEntry
+	}
+)
+
 var file_proto_common_proto_depIdxs = []int32{
 	3, // 0: kic.common.File.metadata:type_name -> kic.common.File.MetadataEntry
 	1, // [1:1] is the sub-list for method output_type

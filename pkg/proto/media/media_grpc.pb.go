@@ -4,6 +4,7 @@ package proto
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -162,21 +163,24 @@ type MediaStorageServer interface {
 }
 
 // UnimplementedMediaStorageServer must be embedded to have forward compatible implementations.
-type UnimplementedMediaStorageServer struct {
-}
+type UnimplementedMediaStorageServer struct{}
 
 func (UnimplementedMediaStorageServer) UploadFile(MediaStorage_UploadFileServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadFile not implemented")
 }
+
 func (UnimplementedMediaStorageServer) DownloadFileByName(*DownloadFileRequest, MediaStorage_DownloadFileByNameServer) error {
 	return status.Errorf(codes.Unimplemented, "method DownloadFileByName not implemented")
 }
+
 func (UnimplementedMediaStorageServer) CheckForFileByName(context.Context, *CheckForFileRequest) (*CheckForFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckForFileByName not implemented")
 }
+
 func (UnimplementedMediaStorageServer) GetFilesWithMetadata(context.Context, *GetFilesByMetadataRequest) (*GetFilesByMetadataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFilesWithMetadata not implemented")
 }
+
 func (UnimplementedMediaStorageServer) DeleteFilesWithMetaData(context.Context, *DeleteFilesWithMetaDataRequest) (*DeleteFilesWithMetaDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFilesWithMetaData not implemented")
 }

@@ -12,12 +12,13 @@
 package proto
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	common "./proto/common"
 	_ "github.com/golang/protobuf/ptypes/timestamp"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -33,9 +34,9 @@ const (
 type HealthDataError int32
 
 const (
-	//USER_NOT_FOUND denotes if user is not found.
+	// USER_NOT_FOUND denotes if user is not found.
 	HealthDataError_USER_NOT_FOUND HealthDataError = 0
-	//DATE_NOT_FOUND denotes if date is not found.
+	// DATE_NOT_FOUND denotes if date is not found.
 	HealthDataError_DATE_NOT_FOUND HealthDataError = 1
 )
 
@@ -85,7 +86,7 @@ type HealthDataErrorResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Error denotes if error occurred with health data.
+	// Error denotes if error occurred with health data.
 	Error HealthDataError `protobuf:"varint,1,opt,name=error,proto3,enum=kic.health.HealthDataError" json:"error,omitempty"`
 }
 
@@ -185,9 +186,9 @@ type MentalHealthLog struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Date of Mental Health Log Entry
+	// Date of Mental Health Log Entry
 	LogDate *common.Date `protobuf:"bytes,1,opt,name=logDate,proto3" json:"logDate,omitempty"`
-	//Score denotes the mental health tracking score from logDate.
+	// Score denotes the mental health tracking score from logDate.
 	Score uint32 `protobuf:"varint,2,opt,name=score,proto3" json:"score,omitempty"`
 }
 
@@ -244,9 +245,9 @@ type GetHealthDataForUserResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Error denotes if error occurred when obtaining health data and what the error was.
+	// Error denotes if error occurred when obtaining health data and what the error was.
 	Error HealthDataError `protobuf:"varint,1,opt,name=error,proto3,enum=kic.health.HealthDataError" json:"error,omitempty"`
-	//healthData denotes the data that was requested by user from mental health log
+	// healthData denotes the data that was requested by user from mental health log
 	HealthData []*MentalHealthLog `protobuf:"bytes,2,rep,name=healthData,proto3" json:"healthData,omitempty"`
 }
 
@@ -305,7 +306,7 @@ type AddHealthDataForUserRequest struct {
 
 	// The ID of the user in the user database, used globally for identification.
 	UserID int64 `protobuf:"varint,1,opt,name=userID,proto3" json:"userID,omitempty"`
-	//newEntry denotes the ID of the new entry that is requested to be made.
+	// newEntry denotes the ID of the new entry that is requested to be made.
 	NewEntry *MentalHealthLog `protobuf:"bytes,2,opt,name=newEntry,proto3" json:"newEntry,omitempty"`
 }
 
@@ -437,12 +438,12 @@ type isDeleteHealthDataForUserRequest_Data interface {
 }
 
 type DeleteHealthDataForUserRequest_All struct {
-	//all denotes if all of the health data should be removed or not.
+	// all denotes if all of the health data should be removed or not.
 	All bool `protobuf:"varint,2,opt,name=all,proto3,oneof"`
 }
 
 type DeleteHealthDataForUserRequest_DateToRemove struct {
-	//dateToRemove denotes the date of the mental health log data to remove.
+	// dateToRemove denotes the date of the mental health log data to remove.
 	DateToRemove *common.Date `protobuf:"bytes,3,opt,name=dateToRemove,proto3,oneof"`
 }
 
@@ -457,9 +458,9 @@ type DeleteHealthDataForUserResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Error denotes if error occurred when deleting health data and the ID of the error it was.
+	// Error denotes if error occurred when deleting health data and the ID of the error it was.
 	Error HealthDataError `protobuf:"varint,1,opt,name=error,proto3,enum=kic.health.HealthDataError" json:"error,omitempty"`
-	//entriesDeleted denotes the mental health log entries that was successfully deleted for the user
+	// entriesDeleted denotes the mental health log entries that was successfully deleted for the user
 	EntriesDeleted uint32 `protobuf:"varint,2,opt,name=entriesDeleted,proto3" json:"entriesDeleted,omitempty"`
 }
 
@@ -518,7 +519,7 @@ type UpdateHealthDataForDateRequest struct {
 
 	// The ID of the user in the user database, used globally for identification.
 	UserID int64 `protobuf:"varint,1,opt,name=userID,proto3" json:"userID,omitempty"`
-	//The desiredLogInfo denotes the log info that the user would like to update.
+	// The desiredLogInfo denotes the log info that the user would like to update.
 	DesiredLogInfo *MentalHealthLog `protobuf:"bytes,2,opt,name=desiredLogInfo,proto3" json:"desiredLogInfo,omitempty"`
 }
 
@@ -679,20 +680,23 @@ func file_proto_health_proto_rawDescGZIP() []byte {
 	return file_proto_health_proto_rawDescData
 }
 
-var file_proto_health_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_health_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
-var file_proto_health_proto_goTypes = []interface{}{
-	(HealthDataError)(0),                    // 0: kic.health.HealthDataError
-	(*HealthDataErrorResponse)(nil),         // 1: kic.health.HealthDataErrorResponse
-	(*GetHealthDataForUserRequest)(nil),     // 2: kic.health.GetHealthDataForUserRequest
-	(*MentalHealthLog)(nil),                 // 3: kic.health.MentalHealthLog
-	(*GetHealthDataForUserResponse)(nil),    // 4: kic.health.GetHealthDataForUserResponse
-	(*AddHealthDataForUserRequest)(nil),     // 5: kic.health.AddHealthDataForUserRequest
-	(*DeleteHealthDataForUserRequest)(nil),  // 6: kic.health.DeleteHealthDataForUserRequest
-	(*DeleteHealthDataForUserResponse)(nil), // 7: kic.health.DeleteHealthDataForUserResponse
-	(*UpdateHealthDataForDateRequest)(nil),  // 8: kic.health.UpdateHealthDataForDateRequest
-	(*common.Date)(nil),                     // 9: kic.common.Date
-}
+var (
+	file_proto_health_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+	file_proto_health_proto_msgTypes  = make([]protoimpl.MessageInfo, 8)
+	file_proto_health_proto_goTypes   = []interface{}{
+		(HealthDataError)(0),                    // 0: kic.health.HealthDataError
+		(*HealthDataErrorResponse)(nil),         // 1: kic.health.HealthDataErrorResponse
+		(*GetHealthDataForUserRequest)(nil),     // 2: kic.health.GetHealthDataForUserRequest
+		(*MentalHealthLog)(nil),                 // 3: kic.health.MentalHealthLog
+		(*GetHealthDataForUserResponse)(nil),    // 4: kic.health.GetHealthDataForUserResponse
+		(*AddHealthDataForUserRequest)(nil),     // 5: kic.health.AddHealthDataForUserRequest
+		(*DeleteHealthDataForUserRequest)(nil),  // 6: kic.health.DeleteHealthDataForUserRequest
+		(*DeleteHealthDataForUserResponse)(nil), // 7: kic.health.DeleteHealthDataForUserResponse
+		(*UpdateHealthDataForDateRequest)(nil),  // 8: kic.health.UpdateHealthDataForDateRequest
+		(*common.Date)(nil),                     // 9: kic.common.Date
+	}
+)
+
 var file_proto_health_proto_depIdxs = []int32{
 	0,  // 0: kic.health.HealthDataErrorResponse.error:type_name -> kic.health.HealthDataError
 	9,  // 1: kic.health.MentalHealthLog.logDate:type_name -> kic.common.Date

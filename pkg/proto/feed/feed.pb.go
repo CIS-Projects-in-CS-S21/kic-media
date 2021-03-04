@@ -10,11 +10,12 @@
 package proto
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	common "./proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -254,14 +255,17 @@ func file_proto_feed_proto_rawDescGZIP() []byte {
 	return file_proto_feed_proto_rawDescData
 }
 
-var file_proto_feed_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_feed_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_proto_feed_proto_goTypes = []interface{}{
-	(GenerateFeedError)(0),              // 0: kic.feed.GenerateFeedError
-	(*GenerateFeedForUserRequest)(nil),  // 1: kic.feed.GenerateFeedForUserRequest
-	(*GenerateFeedForUserResponse)(nil), // 2: kic.feed.GenerateFeedForUserResponse
-	(*common.File)(nil),                 // 3: kic.common.File
-}
+var (
+	file_proto_feed_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+	file_proto_feed_proto_msgTypes  = make([]protoimpl.MessageInfo, 2)
+	file_proto_feed_proto_goTypes   = []interface{}{
+		(GenerateFeedError)(0),              // 0: kic.feed.GenerateFeedError
+		(*GenerateFeedForUserRequest)(nil),  // 1: kic.feed.GenerateFeedForUserRequest
+		(*GenerateFeedForUserResponse)(nil), // 2: kic.feed.GenerateFeedForUserResponse
+		(*common.File)(nil),                 // 3: kic.common.File
+	}
+)
+
 var file_proto_feed_proto_depIdxs = []int32{
 	3, // 0: kic.feed.GenerateFeedForUserResponse.fileInfo:type_name -> kic.common.File
 	0, // 1: kic.feed.GenerateFeedForUserResponse.error:type_name -> kic.feed.GenerateFeedError

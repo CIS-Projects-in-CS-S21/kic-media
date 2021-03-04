@@ -11,11 +11,12 @@
 package proto
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	common "./proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -836,23 +837,26 @@ func file_proto_friends_proto_rawDescGZIP() []byte {
 	return file_proto_friends_proto_rawDescData
 }
 
-var file_proto_friends_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_proto_friends_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
-var file_proto_friends_proto_goTypes = []interface{}{
-	(ConnectionError)(0),                         // 0: kic.friends.ConnectionError
-	(*GetFriendsForUserRequest)(nil),             // 1: kic.friends.GetFriendsForUserRequest
-	(*GetFriendsForUserResponse)(nil),            // 2: kic.friends.GetFriendsForUserResponse
-	(*GetRecommendationsForUserRequest)(nil),     // 3: kic.friends.GetRecommendationsForUserRequest
-	(*GetRecommendationsForUserResponse)(nil),    // 4: kic.friends.GetRecommendationsForUserResponse
-	(*UpdateConnectionBetweenUsersRequest)(nil),  // 5: kic.friends.UpdateConnectionBetweenUsersRequest
-	(*GetConnectionBetweenUsersRequest)(nil),     // 6: kic.friends.GetConnectionBetweenUsersRequest
-	(*ConnectionBetweenUsersResponse)(nil),       // 7: kic.friends.ConnectionBetweenUsersResponse
-	(*DeleteConnectionBetweenUsersRequest)(nil),  // 8: kic.friends.DeleteConnectionBetweenUsersRequest
-	(*DeleteConnectionBetweenUsersResponse)(nil), // 9: kic.friends.DeleteConnectionBetweenUsersResponse
-	(*CreateConnectionForUsersRequest)(nil),      // 10: kic.friends.CreateConnectionForUsersRequest
-	(*CreateConnectionForUsersResponse)(nil),     // 11: kic.friends.CreateConnectionForUsersResponse
-	(*common.User)(nil),                          // 12: kic.common.User
-}
+var (
+	file_proto_friends_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+	file_proto_friends_proto_msgTypes  = make([]protoimpl.MessageInfo, 11)
+	file_proto_friends_proto_goTypes   = []interface{}{
+		(ConnectionError)(0),                         // 0: kic.friends.ConnectionError
+		(*GetFriendsForUserRequest)(nil),             // 1: kic.friends.GetFriendsForUserRequest
+		(*GetFriendsForUserResponse)(nil),            // 2: kic.friends.GetFriendsForUserResponse
+		(*GetRecommendationsForUserRequest)(nil),     // 3: kic.friends.GetRecommendationsForUserRequest
+		(*GetRecommendationsForUserResponse)(nil),    // 4: kic.friends.GetRecommendationsForUserResponse
+		(*UpdateConnectionBetweenUsersRequest)(nil),  // 5: kic.friends.UpdateConnectionBetweenUsersRequest
+		(*GetConnectionBetweenUsersRequest)(nil),     // 6: kic.friends.GetConnectionBetweenUsersRequest
+		(*ConnectionBetweenUsersResponse)(nil),       // 7: kic.friends.ConnectionBetweenUsersResponse
+		(*DeleteConnectionBetweenUsersRequest)(nil),  // 8: kic.friends.DeleteConnectionBetweenUsersRequest
+		(*DeleteConnectionBetweenUsersResponse)(nil), // 9: kic.friends.DeleteConnectionBetweenUsersResponse
+		(*CreateConnectionForUsersRequest)(nil),      // 10: kic.friends.CreateConnectionForUsersRequest
+		(*CreateConnectionForUsersResponse)(nil),     // 11: kic.friends.CreateConnectionForUsersResponse
+		(*common.User)(nil),                          // 12: kic.common.User
+	}
+)
+
 var file_proto_friends_proto_depIdxs = []int32{
 	12, // 0: kic.friends.GetFriendsForUserRequest.user:type_name -> kic.common.User
 	12, // 1: kic.friends.GetRecommendationsForUserRequest.user:type_name -> kic.common.User

@@ -15,11 +15,12 @@
 package proto
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	common "./proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -1182,29 +1183,32 @@ func file_proto_users_proto_rawDescGZIP() []byte {
 	return file_proto_users_proto_rawDescData
 }
 
-var file_proto_users_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_proto_users_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
-var file_proto_users_proto_goTypes = []interface{}{
-	(AddUserError)(0),                 // 0: kic.users.AddUserError
-	(GetUserError)(0),                 // 1: kic.users.GetUserError
-	(GetJWTTokenResponse_JWTError)(0), // 2: kic.users.GetJWTTokenResponse.JWTError
-	(*AddUserRequest)(nil),            // 3: kic.users.AddUserRequest
-	(*AddUserResponse)(nil),           // 4: kic.users.AddUserResponse
-	(*GetUserByUsernameRequest)(nil),  // 5: kic.users.GetUserByUsernameRequest
-	(*GetUserByUsernameResponse)(nil), // 6: kic.users.GetUserByUsernameResponse
-	(*GetUserByIDRequest)(nil),        // 7: kic.users.GetUserByIDRequest
-	(*GetUserByIDResponse)(nil),       // 8: kic.users.GetUserByIDResponse
-	(*GetUserNameByIDRequest)(nil),    // 9: kic.users.GetUserNameByIDRequest
-	(*GetUserNameByIDResponse)(nil),   // 10: kic.users.GetUserNameByIDResponse
-	(*DeleteUserByIDRequest)(nil),     // 11: kic.users.DeleteUserByIDRequest
-	(*DeleteUserByIDResponse)(nil),    // 12: kic.users.DeleteUserByIDResponse
-	(*UpdateUserInfoRequest)(nil),     // 13: kic.users.UpdateUserInfoRequest
-	(*UpdateUserInfoResponse)(nil),    // 14: kic.users.UpdateUserInfoResponse
-	(*GetJWTTokenRequest)(nil),        // 15: kic.users.GetJWTTokenRequest
-	(*GetJWTTokenResponse)(nil),       // 16: kic.users.GetJWTTokenResponse
-	(*common.Date)(nil),               // 17: kic.common.Date
-	(*common.User)(nil),               // 18: kic.common.User
-}
+var (
+	file_proto_users_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+	file_proto_users_proto_msgTypes  = make([]protoimpl.MessageInfo, 14)
+	file_proto_users_proto_goTypes   = []interface{}{
+		(AddUserError)(0),                 // 0: kic.users.AddUserError
+		(GetUserError)(0),                 // 1: kic.users.GetUserError
+		(GetJWTTokenResponse_JWTError)(0), // 2: kic.users.GetJWTTokenResponse.JWTError
+		(*AddUserRequest)(nil),            // 3: kic.users.AddUserRequest
+		(*AddUserResponse)(nil),           // 4: kic.users.AddUserResponse
+		(*GetUserByUsernameRequest)(nil),  // 5: kic.users.GetUserByUsernameRequest
+		(*GetUserByUsernameResponse)(nil), // 6: kic.users.GetUserByUsernameResponse
+		(*GetUserByIDRequest)(nil),        // 7: kic.users.GetUserByIDRequest
+		(*GetUserByIDResponse)(nil),       // 8: kic.users.GetUserByIDResponse
+		(*GetUserNameByIDRequest)(nil),    // 9: kic.users.GetUserNameByIDRequest
+		(*GetUserNameByIDResponse)(nil),   // 10: kic.users.GetUserNameByIDResponse
+		(*DeleteUserByIDRequest)(nil),     // 11: kic.users.DeleteUserByIDRequest
+		(*DeleteUserByIDResponse)(nil),    // 12: kic.users.DeleteUserByIDResponse
+		(*UpdateUserInfoRequest)(nil),     // 13: kic.users.UpdateUserInfoRequest
+		(*UpdateUserInfoResponse)(nil),    // 14: kic.users.UpdateUserInfoResponse
+		(*GetJWTTokenRequest)(nil),        // 15: kic.users.GetJWTTokenRequest
+		(*GetJWTTokenResponse)(nil),       // 16: kic.users.GetJWTTokenResponse
+		(*common.Date)(nil),               // 17: kic.common.Date
+		(*common.User)(nil),               // 18: kic.common.User
+	}
+)
+
 var file_proto_users_proto_depIdxs = []int32{
 	17, // 0: kic.users.AddUserRequest.birthday:type_name -> kic.common.Date
 	18, // 1: kic.users.AddUserResponse.createdUser:type_name -> kic.common.User

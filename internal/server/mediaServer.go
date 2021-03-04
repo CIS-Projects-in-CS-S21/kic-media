@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"go.uber.org/zap"
 
 	"github.com/kic/media/pkg/database"
 	pbmedia "github.com/kic/media/pkg/proto/media"
@@ -11,6 +13,15 @@ type MediaStorageServer struct {
 	// required by interface for backwards compatibility with streaming methods
 	pbmedia.UnimplementedMediaStorageServer
 	db database.Repository
+	logger *zap.SugaredLogger
+}
+
+func NewMediaStorageServer(db database.Repository, logger *zap.SugaredLogger) *MediaStorageServer {
+	return &MediaStorageServer{
+		UnimplementedMediaStorageServer: pbmedia.UnimplementedMediaStorageServer{},
+		db:                              db,
+		logger: 						 logger,
+	}
 }
 
 func (m *MediaStorageServer) UploadFile(stream pbmedia.MediaStorage_UploadFileServer) error {
@@ -23,8 +34,11 @@ func (m *MediaStorageServer) DownloadFileByName(stuff *pbmedia.DownloadFileReque
 }
 
 // Check for the existence of a file by filename
-func (m *MediaStorageServer) CheckForFileByName(context.Context, *pbmedia.CheckForFileRequest) (*pbmedia.CheckForFileResponse, error) {
-	return nil, nil
+func (m *MediaStorageServer) CheckForFileByName(ctx context.Context, req *pbmedia.CheckForFileRequest) (*pbmedia.CheckForFileResponse, error) {
+	info := req.FileInfo
+	out := fmt.Sprintf("%v", info.FileLocation)
+	m.logger.Info(out)
+	return &pbmedia.CheckForFileResponse{}, nil
 }
 
 // Allows for the requesting of files with specific key value pairs as metadata. The strictness can be set

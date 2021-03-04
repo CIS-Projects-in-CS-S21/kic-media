@@ -10,11 +10,12 @@
 package proto
 
 import (
-	common "./proto/common"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	common "github.com/kic/media/pkg/proto/common"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -30,9 +31,9 @@ const (
 type DownloadFileByNameError int32
 
 const (
-	//FILE_NOT_FOUND denotes if file is not found.
+	// FILE_NOT_FOUND denotes if file is not found.
 	DownloadFileByNameError_FILE_NOT_FOUND DownloadFileByNameError = 0
-	//BUCKET_NOT_FOUND denotes if bucket is not found.
+	// BUCKET_NOT_FOUND denotes if bucket is not found.
 	DownloadFileByNameError_BUCKET_NOT_FOUND DownloadFileByNameError = 1
 )
 
@@ -139,7 +140,7 @@ func (MetadataStrictness) EnumDescriptor() ([]byte, []int) {
 type DeleteFileError int32
 
 const (
-	//ACCESS_DENIED denotes if file is not able to be deleted due to denial of access.
+	// ACCESS_DENIED denotes if file is not able to be deleted due to denial of access.
 	DeleteFileError_ACCESS_DENIED DeleteFileError = 0
 )
 
@@ -271,9 +272,9 @@ type UploadFileResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Id of file being uploaded
+	// Id of file being uploaded
 	FileID string `protobuf:"bytes,1,opt,name=fileID,proto3" json:"fileID,omitempty"`
-	//Size of file in bytes
+	// Size of file in bytes
 	BytesRead uint64 `protobuf:"varint,2,opt,name=bytesRead,proto3" json:"bytesRead,omitempty"`
 }
 
@@ -330,7 +331,7 @@ type CheckForFileRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Information of file to be checked
+	// Information of file to be checked
 	FileInfo *common.File `protobuf:"bytes,1,opt,name=fileInfo,proto3" json:"fileInfo,omitempty"`
 }
 
@@ -380,7 +381,7 @@ type CheckForFileResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Returns true if file is found to exist
+	// Returns true if file is found to exist
 	Exists bool `protobuf:"varint,1,opt,name=exists,proto3" json:"exists,omitempty"`
 }
 
@@ -430,7 +431,7 @@ type DownloadFileRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Information of file to be downloaded
+	// Information of file to be downloaded
 	FileInfo *common.File `protobuf:"bytes,1,opt,name=fileInfo,proto3" json:"fileInfo,omitempty"`
 }
 
@@ -564,7 +565,7 @@ type GetFilesByMetadataRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Map of desired metadata
+	// Map of desired metadata
 	DesiredMetadata map[string]string `protobuf:"bytes,1,rep,name=desiredMetadata,proto3" json:"desiredMetadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// Flags sent with a get file by metadata request to tell the server how seriously it wants the metadata request
 	// to be conformed to
@@ -624,7 +625,7 @@ type GetFilesByMetadataResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Information of file to be downloaded
+	// Information of file to be downloaded
 	FileInfos []*common.File `protobuf:"bytes,1,rep,name=fileInfos,proto3" json:"fileInfos,omitempty"`
 }
 
@@ -674,7 +675,7 @@ type DeleteFilesWithMetaDataRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//Map of desired metadata of file to be deleted
+	// Map of desired metadata of file to be deleted
 	Metadata map[string]string `protobuf:"bytes,1,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	// Flags sent to tell the server how seriously it wants the metadata request
 	// to be conformed to
@@ -734,7 +735,7 @@ type DeleteFilesWithMetaDataResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	//DeleteFileError denotes if file is not able to be deleted.
+	// DeleteFileError denotes if file is not able to be deleted.
 	Error DeleteFileError `protobuf:"varint,1,opt,name=error,proto3,enum=kic.media.DeleteFileError" json:"error,omitempty"`
 }
 
@@ -914,26 +915,29 @@ func file_proto_media_proto_rawDescGZIP() []byte {
 	return file_proto_media_proto_rawDescData
 }
 
-var file_proto_media_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_proto_media_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
-var file_proto_media_proto_goTypes = []interface{}{
-	(DownloadFileByNameError)(0),            // 0: kic.media.DownloadFileByNameError
-	(MetadataStrictness)(0),                 // 1: kic.media.MetadataStrictness
-	(DeleteFileError)(0),                    // 2: kic.media.DeleteFileError
-	(*UploadFileRequest)(nil),               // 3: kic.media.UploadFileRequest
-	(*UploadFileResponse)(nil),              // 4: kic.media.UploadFileResponse
-	(*CheckForFileRequest)(nil),             // 5: kic.media.CheckForFileRequest
-	(*CheckForFileResponse)(nil),            // 6: kic.media.CheckForFileResponse
-	(*DownloadFileRequest)(nil),             // 7: kic.media.DownloadFileRequest
-	(*DownloadFileResponse)(nil),            // 8: kic.media.DownloadFileResponse
-	(*GetFilesByMetadataRequest)(nil),       // 9: kic.media.GetFilesByMetadataRequest
-	(*GetFilesByMetadataResponse)(nil),      // 10: kic.media.GetFilesByMetadataResponse
-	(*DeleteFilesWithMetaDataRequest)(nil),  // 11: kic.media.DeleteFilesWithMetaDataRequest
-	(*DeleteFilesWithMetaDataResponse)(nil), // 12: kic.media.DeleteFilesWithMetaDataResponse
-	nil,                                     // 13: kic.media.GetFilesByMetadataRequest.DesiredMetadataEntry
-	nil,                                     // 14: kic.media.DeleteFilesWithMetaDataRequest.MetadataEntry
-	(*common.File)(nil),                     // 15: kic.common.File
-}
+var (
+	file_proto_media_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+	file_proto_media_proto_msgTypes  = make([]protoimpl.MessageInfo, 12)
+	file_proto_media_proto_goTypes   = []interface{}{
+		(DownloadFileByNameError)(0),            // 0: kic.media.DownloadFileByNameError
+		(MetadataStrictness)(0),                 // 1: kic.media.MetadataStrictness
+		(DeleteFileError)(0),                    // 2: kic.media.DeleteFileError
+		(*UploadFileRequest)(nil),               // 3: kic.media.UploadFileRequest
+		(*UploadFileResponse)(nil),              // 4: kic.media.UploadFileResponse
+		(*CheckForFileRequest)(nil),             // 5: kic.media.CheckForFileRequest
+		(*CheckForFileResponse)(nil),            // 6: kic.media.CheckForFileResponse
+		(*DownloadFileRequest)(nil),             // 7: kic.media.DownloadFileRequest
+		(*DownloadFileResponse)(nil),            // 8: kic.media.DownloadFileResponse
+		(*GetFilesByMetadataRequest)(nil),       // 9: kic.media.GetFilesByMetadataRequest
+		(*GetFilesByMetadataResponse)(nil),      // 10: kic.media.GetFilesByMetadataResponse
+		(*DeleteFilesWithMetaDataRequest)(nil),  // 11: kic.media.DeleteFilesWithMetaDataRequest
+		(*DeleteFilesWithMetaDataResponse)(nil), // 12: kic.media.DeleteFilesWithMetaDataResponse
+		nil,                                     // 13: kic.media.GetFilesByMetadataRequest.DesiredMetadataEntry
+		nil,                                     // 14: kic.media.DeleteFilesWithMetaDataRequest.MetadataEntry
+		(*common.File)(nil),                     // 15: kic.common.File
+	}
+)
+
 var file_proto_media_proto_depIdxs = []int32{
 	15, // 0: kic.media.UploadFileRequest.fileInfo:type_name -> kic.common.File
 	15, // 1: kic.media.CheckForFileRequest.fileInfo:type_name -> kic.common.File
