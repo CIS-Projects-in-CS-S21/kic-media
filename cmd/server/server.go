@@ -22,7 +22,7 @@ import (
 
 )
 
-func dbRepositorySetup(logger *zap.SugaredLogger) database.Repository {
+func dbRepositorySetup(logger *zap.SugaredLogger) (database.Repository, *mongo.Client) {
 	MongoURI := os.Getenv("MONGO_URI")
 	IsProduction := os.Getenv("PRODUCTION") != ""
 
@@ -34,7 +34,6 @@ func dbRepositorySetup(logger *zap.SugaredLogger) database.Repository {
 	if err != nil {
 		logger.Fatalf("Couldn't connect to mongo: %v", err)
 	}
-	defer mongoClient.Disconnect(ctx)
 
 	err = mongoClient.Ping(ctx, readpref.Primary())
 	if err != nil {
@@ -43,17 +42,17 @@ func dbRepositorySetup(logger *zap.SugaredLogger) database.Repository {
 
 	var dbName string
 	if IsProduction {
-		dbName = "prod"
+		dbName = "media-prod"
 	} else {
-		dbName = "test"
+		dbName = "media-test"
 	}
 
 	repository := database.NewMongoRepository(mongoClient, logger)
 	repository.SetCollections(dbName)
-	return repository
+	return repository, mongoClient
 }
 
-func grpcSetup(logger *zap.SugaredLogger, db database.Repository) *grpc.Server{
+func grpcSetup(logger *zap.SugaredLogger, db database.Repository) *grpc.Server {
 	ListenAddress := ":" + os.Getenv("PORT")
 
 	listener, err := net.Listen("tcp", ListenAddress)
@@ -82,14 +81,14 @@ func grpcSetup(logger *zap.SugaredLogger, db database.Repository) *grpc.Server{
 }
 
 func main() {
-	time.Sleep(1 * time.Second)
 	logger := logging.CreateLogger(zapcore.DebugLevel)
 
-	repo := dbRepositorySetup(logger)
+	repo, mongoClient := dbRepositorySetup(logger)
 
 	serv := grpcSetup(logger, repo)
 
 	defer serv.Stop()
+	defer mongoClient.Disconnect(context.Background())
 
 	// the server is listening in a goroutine so hang until we get an interrupt signal
 	c := make(chan os.Signal)
