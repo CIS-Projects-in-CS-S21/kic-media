@@ -27,7 +27,7 @@ spec:
         app: kic-media
     spec:
       containers:
-        - image: gcr.io/PROJECT_ID/IMAGE:TAG
+        - image: gcr.io/keeping-it-casual/kic-media:dev #gcr.io/PROJECT_ID/IMAGE:TAG
           name: kic-media
           ports:
             - containerPort: 50051
@@ -41,7 +41,7 @@ spec:
                   name: mongo-uri
                   key: mongo-uri
             - name: PRODUCTION
-              value: true
+              value: "true"
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: /var/secrets/google/key.json
             - name: PORT
