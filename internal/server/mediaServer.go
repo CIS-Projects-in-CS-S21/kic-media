@@ -3,42 +3,52 @@ package server
 import (
 	"bytes"
 	"context"
-	"github.com/kic/media/pkg/database"
-	pbmedia "github.com/kic/media/pkg/proto/media"
+	"io"
+	"math"
+
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"io"
+
+	"github.com/kic/media/pkg/cloudstorage"
+	"github.com/kic/media/pkg/database"
+	pbmedia "github.com/kic/media/pkg/proto/media"
 )
 
-// 1 MB
-const maxImageSize = 1 << 20
+const (
+	// 2 MB
+	maxImageSize = 2 << 20
+	// Size of each message when we server-side stream a file to a client
+	packetSize = 1024
+)
 
 type MediaStorageServer struct {
 	// required by interface for backwards compatibility with streaming methods
 	pbmedia.UnimplementedMediaStorageServer
-	db database.Repository
-	logger *zap.SugaredLogger
+	db         database.Repository
+	cloudStore cloudstorage.CloudStorage
+	logger     *zap.SugaredLogger
 }
 
-func NewMediaStorageServer(db database.Repository, logger *zap.SugaredLogger) *MediaStorageServer {
+func NewMediaStorageServer(db database.Repository, cloudStore cloudstorage.CloudStorage, logger *zap.SugaredLogger) *MediaStorageServer {
 	return &MediaStorageServer{
 		UnimplementedMediaStorageServer: pbmedia.UnimplementedMediaStorageServer{},
 		db:                              db,
-		logger: 						 logger,
+		cloudStore:                      cloudStore,
+		logger:                          logger,
 	}
 }
 
 func (m *MediaStorageServer) UploadFile(stream pbmedia.MediaStorage_UploadFileServer) error {
 	req, err := stream.Recv()
 	if err != nil {
-		m.logger.Infof("%v", err)
+		m.logger.Debugf("%v", err)
 		return status.Errorf(codes.Unknown, "File Data could not be received")
 	}
 	fileInfo := req.GetFileInfo()
-	m.logger.Infof("FileName: %v", fileInfo.FileName)
-	m.logger.Infof("FileName: %v", fileInfo.FileLocation)
-	m.logger.Infof("FileName: %v", fileInfo.Metadata)
+	m.logger.Debugf("FileName: %v", fileInfo.FileName)
+	m.logger.Debugf("FileName: %v", fileInfo.FileLocation)
+	m.logger.Debugf("FileName: %v", fileInfo.Metadata)
 
 	data := bytes.Buffer{}
 	bytesRead := uint64(0)
@@ -59,22 +69,31 @@ func (m *MediaStorageServer) UploadFile(stream pbmedia.MediaStorage_UploadFileSe
 		chunk := req.GetChunk()
 		size := len(chunk)
 
-		m.logger.Infof("received a chunk with size: %d", size)
+		m.logger.Debugf("received a chunk with size: %d", size)
 
 		bytesRead += uint64(size)
 		if bytesRead > maxImageSize {
+			m.logger.Infof("%v", err)
 			return status.Errorf(codes.InvalidArgument, "file is too large: %d > %d", bytesRead, maxImageSize)
 		}
 		_, err = data.Write(chunk)
 		if err != nil {
-
+			m.logger.Infof("%v", err)
+			return status.Errorf(codes.Internal, "Could not write file")
 		}
+	}
+
+	err = m.cloudStore.UploadFile(fileInfo.FileName, data)
+
+	if err != nil {
+		m.logger.Infof("%v", err)
+		return status.Errorf(codes.Internal, "Could not write file")
 	}
 
 	id, err := m.db.AddFile(context.TODO(), fileInfo)
 
-	res := &pbmedia.UploadFileResponse {
-		FileID: id,
+	res := &pbmedia.UploadFileResponse{
+		FileID:    id,
 		BytesRead: bytesRead,
 	}
 
@@ -85,33 +104,75 @@ func (m *MediaStorageServer) UploadFile(stream pbmedia.MediaStorage_UploadFileSe
 		return status.Errorf(codes.Unknown, "cannot send response: %v", err)
 	}
 
-	m.logger.Infof("saved image with id: %s, size: %d", res.FileID, bytesRead)
+	m.logger.Debugf("saved image with id: %s, size: %d", res.FileID, bytesRead)
 
 	return nil
 }
 
 // Using the same format as above, the service allows the client to retrieve a stored file.
-func (m *MediaStorageServer) DownloadFileByName(stuff *pbmedia.DownloadFileRequest, serv pbmedia.MediaStorage_DownloadFileByNameServer) error {
+func (m *MediaStorageServer) DownloadFileByName(
+	req *pbmedia.DownloadFileRequest,
+	stream pbmedia.MediaStorage_DownloadFileByNameServer,
+) error {
+	fileInfo := req.GetFileInfo()
+
+	file, err := m.db.GetFileWithName(context.TODO(), fileInfo.FileName)
+
+	if err != nil {
+		return err
+	}
+
+	if file.FileName == "" {
+		stream.Send(&pbmedia.DownloadFileResponse{
+			Data: &pbmedia.DownloadFileResponse_Error{
+				Error: pbmedia.DownloadFileByNameError_FILE_NOT_FOUND,
+			},
+		})
+	}
+
+	buffer, err := m.cloudStore.DownloadFile(file.FileName)
+
+	if err != nil {
+		m.logger.Debugf("%v", err)
+		return status.Errorf(codes.Internal, "Could not access file in storage: %v", err)
+	}
+
+	// Stream a number of bytes to our
+	numMessages := int(math.Ceil(float64(buffer.Len()) / float64(packetSize)))
+
+	for i := 0; i < numMessages; i++ {
+		toSend := buffer.Next(packetSize)
+
+		err := stream.Send(&pbmedia.DownloadFileResponse{
+			Data: &pbmedia.DownloadFileResponse_Chunk{
+				Chunk: toSend,
+			},
+		})
+
+		if err != nil {
+			m.logger.Debugf("%v", err)
+			return status.Errorf(codes.Internal, "cannot send chunk data: %v", err)
+		}
+	}
+
 	return nil
 }
 
 // Check for the existence of a file by filename
 func (m *MediaStorageServer) CheckForFileByName(ctx context.Context, req *pbmedia.CheckForFileRequest) (*pbmedia.CheckForFileResponse, error) {
 	info := req.FileInfo
-	m.logger.Infof("%v", info.FileName)
+	m.logger.Debugf("Checking for %v", info.FileName)
 	file, err := m.db.GetFileWithName(ctx, req.FileInfo.FileName)
-	if err != nil {
-		m.logger.Infof("%v", err)
-		return &pbmedia.CheckForFileResponse{
-			Exists: false,
-		}, err
-	}
-	if file.FileName == "" {
+
+	// we failed to find the file either with an error or by returning a file with an empty name
+	if file == nil || err != nil {
+		m.logger.Debugf("%v", err)
 		return &pbmedia.CheckForFileResponse{
 			Exists: false,
 		}, nil
 	}
-	m.logger.Infof("%v", file.FileName)
+
+	m.logger.Debugf("Found this file: %v", file.FileName)
 	return &pbmedia.CheckForFileResponse{
 		Exists: true,
 	}, nil
