@@ -15,8 +15,8 @@ import (
 	reflect "reflect"
 	sync "sync"
 
-	common "./proto/common"
 	_ "github.com/golang/protobuf/ptypes/timestamp"
+	common "github.com/kic/media/pkg/proto/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )

@@ -42,7 +42,7 @@ func NewMediaStorageServer(db database.Repository, cloudStore cloudstorage.Cloud
 func (m *MediaStorageServer) UploadFile(stream pbmedia.MediaStorage_UploadFileServer) error {
 	req, err := stream.Recv()
 	if err != nil {
-		m.logger.Debugf("%v", err)
+		m.logger.Infof("%v", err)
 		return status.Errorf(codes.Unknown, "File Data could not be received")
 	}
 	fileInfo := req.GetFileInfo()
@@ -133,7 +133,7 @@ func (m *MediaStorageServer) DownloadFileByName(
 	buffer, err := m.cloudStore.DownloadFile(file.FileName)
 
 	if err != nil {
-		m.logger.Debugf("%v", err)
+		m.logger.Infof("%v", err)
 		return status.Errorf(codes.Internal, "Could not access file in storage: %v", err)
 	}
 
@@ -150,7 +150,7 @@ func (m *MediaStorageServer) DownloadFileByName(
 		})
 
 		if err != nil {
-			m.logger.Debugf("%v", err)
+			m.logger.Infof("%v", err)
 			return status.Errorf(codes.Internal, "cannot send chunk data: %v", err)
 		}
 	}
@@ -164,9 +164,9 @@ func (m *MediaStorageServer) CheckForFileByName(ctx context.Context, req *pbmedi
 	m.logger.Debugf("Checking for %v", info.FileName)
 	file, err := m.db.GetFileWithName(ctx, req.FileInfo.FileName)
 
-	// we failed to find the file either with an error or by returning a file with an empty name
+	// we failed to find the file either with an error or by returning a nil file
 	if file == nil || err != nil {
-		m.logger.Debugf("%v", err)
+		m.logger.Infof("%v", err)
 		return &pbmedia.CheckForFileResponse{
 			Exists: false,
 		}, nil
@@ -180,11 +180,38 @@ func (m *MediaStorageServer) CheckForFileByName(ctx context.Context, req *pbmedi
 
 // Allows for the requesting of files with specific key value pairs as metadata. The strictness can be set
 // such that for example only perfect matches will be returned.
-func (m *MediaStorageServer) GetFilesWithMetadata(context.Context, *pbmedia.GetFilesByMetadataRequest) (*pbmedia.GetFilesByMetadataResponse, error) {
-	return nil, nil
+func (m *MediaStorageServer) GetFilesWithMetadata(
+	ctx context.Context,
+	req *pbmedia.GetFilesByMetadataRequest,
+) (*pbmedia.GetFilesByMetadataResponse, error) {
+	fileSlice, err := m.db.GetFilesWithMetadata(ctx, req.DesiredMetadata, req.Strictness)
+
+	if err != nil {
+		m.logger.Infof("%v", err)
+		return &pbmedia.GetFilesByMetadataResponse{
+			FileInfos: nil,
+		}, err
+	}
+
+	return &pbmedia.GetFilesByMetadataResponse{
+		FileInfos: fileSlice,
+	}, nil
 }
 
 // Using the same strictness settings as the above, delete particular files with certain metadata.
-func (m *MediaStorageServer) DeleteFilesWithMetaData(context.Context, *pbmedia.DeleteFilesWithMetaDataRequest) (*pbmedia.DeleteFilesWithMetaDataResponse, error) {
-	return nil, nil
+func (m *MediaStorageServer) DeleteFilesWithMetaData(
+	ctx context.Context,
+	req *pbmedia.DeleteFilesWithMetaDataRequest,
+) (*pbmedia.DeleteFilesWithMetaDataResponse, error) {
+	err := m.db.DeleteFilesWithMetadata(ctx, req.Metadata, req.Strictness)
+
+	if err != nil {
+		m.logger.Infof("%v", err)
+		return &pbmedia.DeleteFilesWithMetaDataResponse{
+			Error: pbmedia.DeleteFileError_ACCESS_DENIED,
+		}, err
+	}
+
+	return &pbmedia.DeleteFilesWithMetaDataResponse{
+	}, nil
 }

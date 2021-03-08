@@ -19,7 +19,7 @@ const (
 )
 
 type MongoRepository struct {
-	client *mongo.Client
+	client         *mongo.Client
 	fileCollection *mongo.Collection
 
 	logger *zap.SugaredLogger
@@ -58,25 +58,24 @@ func (m *MongoRepository) GetFilesWithMetadata(
 
 func (m *MongoRepository) GetFileWithName(ctx context.Context, fileName string) (*pbcommon.File, error) {
 	filter := bson.M{
-		"fileName": fileName,
+		"filename": fileName,
 	}
 
-	cur, err := m.fileCollection.Find(context.TODO(), filter)
+	res := m.fileCollection.FindOne(context.TODO(), filter)
 
-	if err != nil {
-		return nil, err
+	if res.Err() == mongo.ErrNoDocuments {
+		return nil, res.Err()
 	}
-
-	defer cur.Close(context.Background())
 
 	file := &pbcommon.File{}
 
-	for cur.Next(context.Background()) {
-		err = cur.Decode(file)
-		if err != nil {
-			log.Println("Failed to decode file info")
-		}
+	err := res.Decode(file)
+
+	if err != nil {
+		log.Println("Failed to decode file info")
 	}
+
+	log.Printf("Devoded: %v", file)
 	return file, nil
 }
 
@@ -84,6 +83,6 @@ func (m *MongoRepository) DeleteFilesWithMetadata(
 	ctx context.Context,
 	meta map[string]string,
 	strict pbmedia.MetadataStrictness,
-) ([]*pbcommon.File, error) {
-	return nil, nil
+) error {
+	return nil
 }

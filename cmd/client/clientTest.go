@@ -1,3 +1,8 @@
+/*
+This is for running integration tests in a production like environment
+ */
+
+
 package main
 
 import (
@@ -16,7 +21,7 @@ import (
 )
 
 func main() {
-	conn, err := grpc.Dial("test.api.keeping-it-casual.com:50051",  grpc.WithInsecure())
+	conn, err := grpc.Dial("test.api.keeping-it-casual.com:50051", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("fail to dial: %v", err)
 	}
@@ -27,7 +32,7 @@ func main() {
 		FileInfo: &pbcommon.File{
 			FileName:     "testerino",
 			FileLocation: "testerino",
-			Metadata: map[string]string{"test": "test"},
+			Metadata:     map[string]string{"test": "test"},
 		},
 	}
 	res, err := client.CheckForFileByName(context.Background(), in)
@@ -53,7 +58,7 @@ func main() {
 			FileInfo: &pbcommon.File{
 				FileName:     "Makefile",
 				FileLocation: "test",
-				Metadata:     map[string]string{
+				Metadata: map[string]string{
 					"rsc": "3711",
 					"r":   "2138",
 					"gri": "1908",
@@ -79,7 +84,7 @@ func main() {
 
 		req := &pbmedia.UploadFileRequest{
 			Data: &pbmedia.UploadFileRequest_Chunk{
-					Chunk: buffer[:n],
+				Chunk: buffer[:n],
 			},
 		}
 
