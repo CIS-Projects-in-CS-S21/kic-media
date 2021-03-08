@@ -22,6 +22,7 @@ const (
 	packetSize = 1024
 )
 
+// MediaStorageServer - Implements the generated interface to be a media storage server handler
 type MediaStorageServer struct {
 	// required by interface for backwards compatibility with streaming methods
 	pbmedia.UnimplementedMediaStorageServer
@@ -30,6 +31,9 @@ type MediaStorageServer struct {
 	logger     *zap.SugaredLogger
 }
 
+// NewMediaStorageServer - create a new instance of a MediaStorageServer struct. Requires a connected database
+// driver which implements the database.Repository interface, a cloud store which implements the
+// cloudstorage.CloudStorage interface, and a logger instance
 func NewMediaStorageServer(db database.Repository, cloudStore cloudstorage.CloudStorage, logger *zap.SugaredLogger) *MediaStorageServer {
 	return &MediaStorageServer{
 		UnimplementedMediaStorageServer: pbmedia.UnimplementedMediaStorageServer{},
@@ -39,6 +43,8 @@ func NewMediaStorageServer(db database.Repository, cloudStore cloudstorage.Cloud
 	}
 }
 
+// UploadFile - allows a client to upload a file in a stream the server which will then
+// store the file information in the database, and store the file in cloud storage
 func (m *MediaStorageServer) UploadFile(stream pbmedia.MediaStorage_UploadFileServer) error {
 	req, err := stream.Recv()
 	if err != nil {
@@ -109,7 +115,7 @@ func (m *MediaStorageServer) UploadFile(stream pbmedia.MediaStorage_UploadFileSe
 	return nil
 }
 
-// Using the same format as above, the service allows the client to retrieve a stored file.
+// DownloadFileByName - allows a client to request a file for download from cloud storage
 func (m *MediaStorageServer) DownloadFileByName(
 	req *pbmedia.DownloadFileRequest,
 	stream pbmedia.MediaStorage_DownloadFileByNameServer,
@@ -158,7 +164,7 @@ func (m *MediaStorageServer) DownloadFileByName(
 	return nil
 }
 
-// Check for the existence of a file by filename
+// CheckForFileByName - allows a client to check if the database has a particular file stored in it
 func (m *MediaStorageServer) CheckForFileByName(ctx context.Context, req *pbmedia.CheckForFileRequest) (*pbmedia.CheckForFileResponse, error) {
 	info := req.FileInfo
 	m.logger.Debugf("Checking for %v", info.FileName)
@@ -178,8 +184,8 @@ func (m *MediaStorageServer) CheckForFileByName(ctx context.Context, req *pbmedi
 	}, nil
 }
 
-// Allows for the requesting of files with specific key value pairs as metadata. The strictness can be set
-// such that for example only perfect matches will be returned.
+// GetFilesWithMetadata - Allows for the requesting of files with specific key value pairs as metadata.
+// The strictness can be set such that for example only perfect matches will be returned.
 func (m *MediaStorageServer) GetFilesWithMetadata(
 	ctx context.Context,
 	req *pbmedia.GetFilesByMetadataRequest,
@@ -198,7 +204,7 @@ func (m *MediaStorageServer) GetFilesWithMetadata(
 	}, nil
 }
 
-// Using the same strictness settings as the above, delete particular files with certain metadata.
+// DeleteFilesWithMetaData - Delete files in the database with the passed metadata
 func (m *MediaStorageServer) DeleteFilesWithMetaData(
 	ctx context.Context,
 	req *pbmedia.DeleteFilesWithMetaDataRequest,

@@ -106,14 +106,12 @@ func prepDBForTests(db database.Repository) {
 		{
 			FileName:     "Animals-Dog-icon.png",
 			FileLocation: "test",
-			Metadata: map[string]string{
-			},
+			Metadata:     map[string]string{},
 		},
 		{
 			FileName:     "term.png",
 			FileLocation: "test",
-			Metadata: map[string]string{
-			},
+			Metadata:     map[string]string{},
 		},
 	}
 
@@ -320,16 +318,16 @@ func TestMediaStorageServer_GetFilesWithMetadataStrict(t *testing.T) {
 
 func TestMediaStorageServer_DownloadFileByName(t *testing.T) {
 
-	tests := []testUploadFile {
+	tests := []testUploadFile{
 		{
 			uploadPath: "Animals-Dog-icon.png",
-			checkPath: "../../test_data/Animals-Dog-icon.png",
-			shouldErr: false,
+			checkPath:  "../../test_data/Animals-Dog-icon.png",
+			shouldErr:  false,
 		},
 		{
 			uploadPath: "term.png",
-			checkPath: "../../test_data/term.png",
-			shouldErr: false,
+			checkPath:  "../../test_data/term.png",
+			shouldErr:  false,
 		},
 	}
 
@@ -347,7 +345,7 @@ func TestMediaStorageServer_DownloadFileByName(t *testing.T) {
 
 		for {
 			recv, err := stream.Recv()
-			if err == io.EOF{
+			if err == io.EOF {
 				break
 			}
 			if err != nil {
@@ -372,18 +370,18 @@ func TestMediaStorageServer_DownloadFileByName(t *testing.T) {
 }
 
 func TestMediaStorageServer_UploadFile(t *testing.T) {
-	tests := []testUploadFile {
+	tests := []testUploadFile{
 		{
-			filePath:  "../../test_data/Animals-Dog-icon.png",
+			filePath:   "../../test_data/Animals-Dog-icon.png",
 			uploadPath: "animal_test.png",
-			checkPath: "../../test_data/animal_test.png",
-			shouldErr: false,
+			checkPath:  "../../test_data/animal_test.png",
+			shouldErr:  false,
 		},
 		{
-			filePath:  "../../test_data/term.png",
+			filePath:   "../../test_data/term.png",
 			uploadPath: "term_test.png",
-			checkPath: "../../test_data/term_test.png",
-			shouldErr: false,
+			checkPath:  "../../test_data/term_test.png",
+			shouldErr:  false,
 		},
 	}
 
@@ -404,7 +402,7 @@ func TestMediaStorageServer_UploadFile(t *testing.T) {
 		if err != nil {
 			t.Errorf("Test %v upload file failure: %v", i, err)
 		}
-		rec, err :=ioutil.ReadAll(fo)
+		rec, err := ioutil.ReadAll(fo)
 		if err != nil {
 			t.Errorf("Test %v upload file failure: %v", i, err)
 		}
@@ -414,8 +412,6 @@ func TestMediaStorageServer_UploadFile(t *testing.T) {
 		}
 	}
 }
-
-
 
 func sendFile(filePath, uploadName string) (*pbmedia.UploadFileResponse, error) {
 	file, err := os.Open(filePath)
@@ -437,7 +433,7 @@ func sendFile(filePath, uploadName string) (*pbmedia.UploadFileResponse, error) 
 			FileInfo: &pbcommon.File{
 				FileName:     uploadName,
 				FileLocation: "test",
-				Metadata: map[string]string{},
+				Metadata:     map[string]string{},
 			},
 		},
 	}

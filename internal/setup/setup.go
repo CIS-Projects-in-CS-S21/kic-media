@@ -19,6 +19,9 @@ import (
 	pbmedia "github.com/kic/media/pkg/proto/media"
 )
 
+
+// DBRepositorySetup - configure and set up the database repository instance, returning the repository
+// and the underlying mongo client for disconnecting on exit
 func DBRepositorySetup(logger *zap.SugaredLogger, dbPrefix string) (database.Repository, *mongo.Client) {
 	MongoURI := os.Getenv("MONGO_URI")
 	IsProduction := os.Getenv("PRODUCTION") != ""
@@ -49,6 +52,7 @@ func DBRepositorySetup(logger *zap.SugaredLogger, dbPrefix string) (database.Rep
 	return repository, mongoClient
 }
 
+// GRPCSetup - configure the grpc server and being listening
 func GRPCSetup(logger *zap.SugaredLogger, db database.Repository) *grpc.Server {
 	IsProduction := os.Getenv("PRODUCTION") != ""
 	ListenAddress := ":" + os.Getenv("PORT")

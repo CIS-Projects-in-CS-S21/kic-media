@@ -1,7 +1,6 @@
 /*
 This is for running integration tests in a production like environment
- */
-
+*/
 
 package main
 
