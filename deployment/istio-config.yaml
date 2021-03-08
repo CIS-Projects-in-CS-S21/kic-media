@@ -1,0 +1,21 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  namespace: kic
+  name: test-media-virtual-service
+spec:
+  hosts:
+    - "api.keeping-it-casual.com"
+  gateways:
+    - kic-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /kic.media.MediaStorage
+          port: 50051
+      route:
+        - destination:
+            host: kic-media-service
+            port:
+              number: 50051
+
