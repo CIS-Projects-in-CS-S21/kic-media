@@ -11,4 +11,4 @@ RUN go mod download
 
 COPY . /usr/code
 
-ENTRYPOINT ["go", "test", "-v", "./..."]
+CMD ["go", "test", "-v", "./..."]

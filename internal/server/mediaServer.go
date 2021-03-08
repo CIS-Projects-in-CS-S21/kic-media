@@ -212,6 +212,5 @@ func (m *MediaStorageServer) DeleteFilesWithMetaData(
 		}, err
 	}
 
-	return &pbmedia.DeleteFilesWithMetaDataResponse{
-	}, nil
+	return &pbmedia.DeleteFilesWithMetaDataResponse{}, nil
 }

@@ -1,10 +1,14 @@
 package server_test
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"github.com/kic/media/internal/server"
 	"github.com/kic/media/pkg/cloudstorage"
 	"google.golang.org/grpc/reflection"
+	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"reflect"
@@ -25,7 +29,20 @@ import (
 var log *zap.SugaredLogger
 var client pbmedia.MediaStorageClient
 
-const testDataPath = "testdata"
+const testDataPath = "../../test_data"
+
+type testGetFilesWithMetadata struct {
+	req       *pbmedia.GetFilesByMetadataRequest
+	res       *pbmedia.GetFilesByMetadataResponse
+	shouldErr bool
+}
+
+type testUploadFile struct {
+	filePath   string
+	uploadPath string
+	checkPath  string
+	shouldErr  bool
+}
 
 func prepDBForTests(db database.Repository) {
 
@@ -86,6 +103,18 @@ func prepDBForTests(db database.Repository) {
 				"type": "image",
 			},
 		},
+		{
+			FileName:     "Animals-Dog-icon.png",
+			FileLocation: "test",
+			Metadata: map[string]string{
+			},
+		},
+		{
+			FileName:     "term.png",
+			FileLocation: "test",
+			Metadata: map[string]string{
+			},
+		},
 	}
 
 	for _, file := range filesToAdd {
@@ -105,7 +134,6 @@ func TestMain(m *testing.M) {
 	repo, mongoClient := setup.DBRepositorySetup(log, "test-media-storage")
 
 	prepDBForTests(repo)
-
 
 	ListenAddress := "localhost:50051"
 
@@ -131,7 +159,6 @@ func TestMain(m *testing.M) {
 	}()
 
 	log.Infof("Server started on %v", ListenAddress)
-
 
 	defer grpcServer.Stop()
 	defer mongoClient.Disconnect(context.Background())
@@ -205,12 +232,6 @@ func TestMediaStorageServer_DeleteFilesWithMetaData(t *testing.T) {
 	t.Fail()
 }
 
-type testGetFilesWithMetadata struct {
-	req *pbmedia.GetFilesByMetadataRequest
-	res *pbmedia.GetFilesByMetadataResponse
-	shouldErr bool
-}
-
 func TestMediaStorageServer_GetFilesWithMetadataStrict(t *testing.T) {
 
 	tests := []testGetFilesWithMetadata{
@@ -219,7 +240,7 @@ func TestMediaStorageServer_GetFilesWithMetadataStrict(t *testing.T) {
 				DesiredMetadata: map[string]string{
 					"type": "image",
 				},
-				Strictness:      pbmedia.MetadataStrictness_STRICT,
+				Strictness: pbmedia.MetadataStrictness_STRICT,
 			},
 			res: &pbmedia.GetFilesByMetadataResponse{
 				FileInfos: []*pbcommon.File{
@@ -239,10 +260,10 @@ func TestMediaStorageServer_GetFilesWithMetadataStrict(t *testing.T) {
 		{
 			req: &pbmedia.GetFilesByMetadataRequest{
 				DesiredMetadata: map[string]string{
-					"UID": "12345",
+					"UID":  "12345",
 					"type": "image",
 				},
-				Strictness:      pbmedia.MetadataStrictness_CASUAL,
+				Strictness: pbmedia.MetadataStrictness_CASUAL,
 			},
 			res: &pbmedia.GetFilesByMetadataResponse{
 				FileInfos: []*pbcommon.File{
@@ -298,9 +319,159 @@ func TestMediaStorageServer_GetFilesWithMetadataStrict(t *testing.T) {
 }
 
 func TestMediaStorageServer_DownloadFileByName(t *testing.T) {
-	t.Fail()
+
+	tests := []testUploadFile {
+		{
+			uploadPath: "Animals-Dog-icon.png",
+			checkPath: "../../test_data/Animals-Dog-icon.png",
+			shouldErr: false,
+		},
+		{
+			uploadPath: "term.png",
+			checkPath: "../../test_data/term.png",
+			shouldErr: false,
+		},
+	}
+
+	for i, test := range tests {
+		stream, err := client.DownloadFileByName(context.Background(), &pbmedia.DownloadFileRequest{FileInfo: &pbcommon.File{
+			FileName: test.uploadPath,
+		}})
+
+		if err != nil {
+			t.Errorf("Test %v download file failure: %v", i, err)
+		}
+
+		var buf []byte
+		buff := bytes.NewBuffer(buf)
+
+		for {
+			recv, err := stream.Recv()
+			if err == io.EOF{
+				break
+			}
+			if err != nil {
+				t.Errorf("Test %v download file failure: %v", i, err)
+			}
+			buff.Write(recv.GetChunk())
+		}
+
+		fo, err := os.Open(test.checkPath)
+		if err != nil {
+			t.Errorf("Test %v download file failure: %v", i, err)
+		}
+		rec, err := ioutil.ReadAll(fo)
+		if err != nil {
+			t.Errorf("Test %v upload file failure: %v", i, err)
+		}
+
+		if bytes.Compare(buff.Bytes(), rec) != 0 {
+			t.Errorf("Test %v download file failure", i)
+		}
+	}
 }
 
 func TestMediaStorageServer_UploadFile(t *testing.T) {
-	t.Fail()
+	tests := []testUploadFile {
+		{
+			filePath:  "../../test_data/Animals-Dog-icon.png",
+			uploadPath: "animal_test.png",
+			checkPath: "../../test_data/animal_test.png",
+			shouldErr: false,
+		},
+		{
+			filePath:  "../../test_data/term.png",
+			uploadPath: "term_test.png",
+			checkPath: "../../test_data/term_test.png",
+			shouldErr: false,
+		},
+	}
+
+	for i, test := range tests {
+		resp, err := sendFile(test.filePath, test.uploadPath)
+		if err != nil || resp.BytesRead == 0 {
+			t.Errorf("Test %v upload file failure", i)
+		}
+		fi, err := os.Open(test.filePath)
+		if err != nil {
+			t.Errorf("Test %v upload file failure: %v", i, err)
+		}
+		fo, err := os.Open(test.checkPath)
+		if err != nil {
+			t.Errorf("Test %v upload file failure: %v", i, err)
+		}
+		sent, err := ioutil.ReadAll(fi)
+		if err != nil {
+			t.Errorf("Test %v upload file failure: %v", i, err)
+		}
+		rec, err :=ioutil.ReadAll(fo)
+		if err != nil {
+			t.Errorf("Test %v upload file failure: %v", i, err)
+		}
+
+		if bytes.Compare(sent, rec) != 0 {
+			t.Errorf("Test %v upload file failure", i)
+		}
+	}
+}
+
+
+
+func sendFile(filePath, uploadName string) (*pbmedia.UploadFileResponse, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal("cannot open file: ", err)
+	}
+	defer file.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	stream, err := client.UploadFile(ctx)
+	if err != nil {
+		log.Fatal("cannot upload file: ", err)
+	}
+
+	req := &pbmedia.UploadFileRequest{
+		Data: &pbmedia.UploadFileRequest_FileInfo{
+			FileInfo: &pbcommon.File{
+				FileName:     uploadName,
+				FileLocation: "test",
+				Metadata: map[string]string{},
+			},
+		},
+	}
+
+	stream.Send(req)
+
+	reader := bufio.NewReader(file)
+	buffer := make([]byte, 1024)
+
+	for {
+		n, err := reader.Read(buffer)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal("cannot read chunk to buffer: ", err)
+		}
+
+		req := &pbmedia.UploadFileRequest{
+			Data: &pbmedia.UploadFileRequest_Chunk{
+				Chunk: buffer[:n],
+			},
+		}
+
+		err = stream.Send(req)
+		if err != nil {
+			log.Fatal("cannot send chunk to server: ", err)
+		}
+	}
+
+	resp, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatal("cannot receive response: ", err)
+	}
+
+	return resp, err
 }
