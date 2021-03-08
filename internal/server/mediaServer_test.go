@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
@@ -227,11 +226,62 @@ func TestMediaStorageServer_CheckForFileByName(t *testing.T) {
 }
 
 func TestMediaStorageServer_DeleteFilesWithMetaData(t *testing.T) {
-	t.Fail()
+
+	meta := map[string]string{
+		"UID":  "deleteMe",
+	}
+	resp, err := client.DeleteFilesWithMetaData(context.Background(), &pbmedia.DeleteFilesWithMetaDataRequest{
+		Metadata: meta,
+		Strictness: pbmedia.MetadataStrictness_STRICT,
+	})
+
+	if err != nil {
+		t.Errorf("Failed to delete files: %v", err)
+	}
+	log.Infof("resp err: %v", resp.Error)
+
+	checkResp, err := client.GetFilesWithMetadata(context.Background(), &pbmedia.GetFilesByMetadataRequest{
+		DesiredMetadata: meta,
+		Strictness: pbmedia.MetadataStrictness_STRICT,
+	})
+
+	if err != nil {
+		t.Errorf("Failed to delete files: %v", err)
+	}
+
+	if len(checkResp.FileInfos) > 0 {
+		t.Error("Failed to delete files")
+	}
 }
 
-func TestMediaStorageServer_GetFilesWithMetadataStrict(t *testing.T) {
+func compareFileLists(l1, l2 []*pbcommon.File) bool {
+	if len(l1) != len(l2) {
+		return false
+	}
 
+	for index := range l1 {
+		if l1[index].FileName != l2[index].FileName {
+			return false
+		}
+		if l1[index].FileLocation != l2[index].FileLocation {
+			return false
+		}
+
+		for key, element := range l1[index].Metadata {
+			if val, ok := l2[index].Metadata[key]; ok {
+				if val != element {
+					return false
+				}
+			} else {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func TestMediaStorageServer_GetFilesWithMetadata(t *testing.T) {
 	tests := []testGetFilesWithMetadata{
 		{
 			req: &pbmedia.GetFilesByMetadataRequest{
@@ -247,6 +297,14 @@ func TestMediaStorageServer_GetFilesWithMetadataStrict(t *testing.T) {
 						FileLocation: "test",
 						Metadata: map[string]string{
 							"UID":  "12345",
+							"type": "image",
+						},
+					},
+					{
+						FileName:     "tester7",
+						FileLocation: "test",
+						Metadata: map[string]string{
+							"UID":  "123",
 							"type": "image",
 						},
 					},
@@ -310,7 +368,7 @@ func TestMediaStorageServer_GetFilesWithMetadataStrict(t *testing.T) {
 			t.Errorf("Test %v should err but did not", i)
 		} else if err != nil {
 			t.Errorf("Test %v should not err but did: %v", i, err)
-		} else if !test.shouldErr && !reflect.DeepEqual(resp, test.res) {
+		} else if !test.shouldErr && !compareFileLists(resp.FileInfos, test.res.FileInfos) {
 			t.Errorf("Test %v did not get the correct response\nresp: %v\ndesired: %v\n", i, resp, test.res)
 		}
 	}

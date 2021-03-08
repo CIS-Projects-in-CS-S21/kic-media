@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/kic/media/internal/setup"
@@ -12,7 +13,14 @@ import (
 )
 
 func main() {
-	logger := logging.CreateLogger(zapcore.InfoLevel)
+	IsProduction := os.Getenv("PRODUCTION") != ""
+	var logger *zap.SugaredLogger
+	if IsProduction {
+		logger = logging.CreateLogger(zapcore.InfoLevel)
+	} else {
+		logger = logging.CreateLogger(zapcore.DebugLevel)
+	}
+
 
 	repo, mongoClient := setup.DBRepositorySetup(logger, "media")
 
