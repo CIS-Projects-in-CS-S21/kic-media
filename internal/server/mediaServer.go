@@ -53,8 +53,8 @@ func (m *MediaStorageServer) UploadFile(stream pbmedia.MediaStorage_UploadFileSe
 	}
 	fileInfo := req.GetFileInfo()
 	m.logger.Debugf("FileName: %v", fileInfo.FileName)
-	m.logger.Debugf("FileName: %v", fileInfo.FileLocation)
-	m.logger.Debugf("FileName: %v", fileInfo.Metadata)
+	m.logger.Debugf("FileLocation: %v", fileInfo.FileLocation)
+	m.logger.Debugf("Metadata: %v", fileInfo.Metadata)
 
 	data := bytes.Buffer{}
 	bytesRead := uint64(0)

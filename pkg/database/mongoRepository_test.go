@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/kic/media/pkg/database"
 	pbcommon "github.com/kic/media/pkg/proto/common"
+	pbmedia "github.com/kic/media/pkg/proto/media"
 	"os"
 	"testing"
 	"time"
@@ -89,6 +90,8 @@ func TestMain(m *testing.M) {
 
 	repo = r
 
+	prepDBForTests()
+
 	defer mongoClient.Disconnect(context.Background())
 
 	exitVal := m.Run()
@@ -96,18 +99,59 @@ func TestMain(m *testing.M) {
 	os.Exit(exitVal)
 }
 
-func TestMongoRepository_AddFile(t *testing.T) {
-	t.Fail()
-}
-
-func TestMongoRepository_GetFilesWithMetadata(t *testing.T) {
-	t.Fail()
-}
-
 func TestMongoRepository_GetFileWithName(t *testing.T) {
-	t.Fail()
+	filesToCheck := []*pbcommon.File{
+		{
+			FileName:     "tester1",
+		},
+		{
+			FileName:     "tester2",
+		},
+		{
+			FileName:     "tester3",
+		},
+	}
+
+	notThereFiles := []*pbcommon.File{
+		{
+			FileName:     "notThere123",
+		},
+	}
+
+	for i, file := range filesToCheck {
+		file, err := repo.GetFileWithName(context.Background(), file.FileName)
+
+		if err != nil || file == nil {
+			t.Errorf("Test %v failed with err: %v", i, err)
+		}
+	}
+
+	for i, file := range notThereFiles {
+		file, err := repo.GetFileWithName(context.Background(), file.FileName)
+
+		if err == nil || file != nil {
+			t.Errorf("Test %v succeeded but should not have", i)
+		}
+	}
 }
 
 func TestMongoRepository_DeleteFilesWithMetadata(t *testing.T) {
-	t.Fail()
+	meta := map[string]string{
+		"deleteMe": "true",
+	}
+	err := repo.DeleteFilesWithMetadata(context.Background(), meta, pbmedia.MetadataStrictness_STRICT)
+
+	if err != nil {
+		t.Errorf("Failed to delete files: %v", err)
+	}
+
+	files, err := repo.GetFilesWithMetadata(context.Background(), meta, pbmedia.MetadataStrictness_STRICT)
+
+	if err != nil {
+		t.Errorf("Failed to delete files: %v", err)
+	}
+
+	if len(files) > 0 {
+		t.Error("Failed to delete files")
+	}
 }
