@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -99,4 +100,42 @@ func main() {
 	}
 
 	log.Printf("image uploaded with id: %s, size: %d", resp.FileID, resp.BytesRead)
+
+	dlStream, err := client.DownloadFileByName(context.Background(), &pbmedia.DownloadFileRequest{
+		FileInfo: &pbcommon.File{
+			FileName: "Makefile",
+		},
+	})
+
+	if err != nil {
+		log.Fatal("cannot receive response in download: ", err)
+	}
+
+	var buf []byte
+	buff := bytes.NewBuffer(buf)
+
+	for {
+		recv, err := dlStream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal("cannot receive response in download: ", err)
+		}
+		buff.Write(recv.GetChunk())
+	}
+
+	fi, err := os.Create("test_data/Makefile")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer fi.Close()
+	writer := bufio.NewWriter(fi)
+
+	n, err := writer.Write(buff.Bytes())
+
+	writer.Flush()
+
+	log.Printf("wrote %v bytes", n)
+
 }

@@ -66,11 +66,12 @@ func GRPCSetup(logger *zap.SugaredLogger, db database.Repository) *grpc.Server {
 
 	var bucketName string
 	if IsProduction {
-		bucketName = "media-prod"
+		bucketName = "kic-media-prod"
 	} else {
-		bucketName = "media-test"
+		bucketName = "kic-media-test"
 	}
-	cloudStorage, err := cloudstorage.NewGoogleStorageBucket(bucketName)
+
+	cloudStorage, err := cloudstorage.NewGoogleStorageBucket(bucketName, logger)
 
 	if err != nil {
 		logger.Fatalf("Unable to connect to cloud store: %v", err)
