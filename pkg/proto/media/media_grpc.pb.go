@@ -4,7 +4,6 @@ package proto
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -18,22 +17,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MediaStorageClient interface {
-	//
-	// Send a file as a stream of messages, starting with a message containing a File message, then
-	// followed by an arbitrary number of messages containing bytes representing the file. The response
-	// will then confirm the number of bytes received or provide an error.
 	UploadFile(ctx context.Context, opts ...grpc.CallOption) (MediaStorage_UploadFileClient, error)
-	//
-	// Using the same format as above, the service allows the client to retrieve a stored file.
 	DownloadFileByName(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (MediaStorage_DownloadFileByNameClient, error)
-	// Check for the existence of a file by filename
 	CheckForFileByName(ctx context.Context, in *CheckForFileRequest, opts ...grpc.CallOption) (*CheckForFileResponse, error)
-	//
-	// Allows for the requesting of files with specific key value pairs as metadata. The strictness can be set
-	// such that for example only perfect matches will be returned.
 	GetFilesWithMetadata(ctx context.Context, in *GetFilesByMetadataRequest, opts ...grpc.CallOption) (*GetFilesByMetadataResponse, error)
-	//
-	// Using the same strictness settings as the above, delete particular files with certain metadata.
 	DeleteFilesWithMetaData(ctx context.Context, in *DeleteFilesWithMetaDataRequest, opts ...grpc.CallOption) (*DeleteFilesWithMetaDataResponse, error)
 }
 
@@ -142,45 +129,30 @@ func (c *mediaStorageClient) DeleteFilesWithMetaData(ctx context.Context, in *De
 // All implementations must embed UnimplementedMediaStorageServer
 // for forward compatibility
 type MediaStorageServer interface {
-	//
-	// Send a file as a stream of messages, starting with a message containing a File message, then
-	// followed by an arbitrary number of messages containing bytes representing the file. The response
-	// will then confirm the number of bytes received or provide an error.
 	UploadFile(MediaStorage_UploadFileServer) error
-	//
-	// Using the same format as above, the service allows the client to retrieve a stored file.
 	DownloadFileByName(*DownloadFileRequest, MediaStorage_DownloadFileByNameServer) error
-	// Check for the existence of a file by filename
 	CheckForFileByName(context.Context, *CheckForFileRequest) (*CheckForFileResponse, error)
-	//
-	// Allows for the requesting of files with specific key value pairs as metadata. The strictness can be set
-	// such that for example only perfect matches will be returned.
 	GetFilesWithMetadata(context.Context, *GetFilesByMetadataRequest) (*GetFilesByMetadataResponse, error)
-	//
-	// Using the same strictness settings as the above, delete particular files with certain metadata.
 	DeleteFilesWithMetaData(context.Context, *DeleteFilesWithMetaDataRequest) (*DeleteFilesWithMetaDataResponse, error)
 	mustEmbedUnimplementedMediaStorageServer()
 }
 
 // UnimplementedMediaStorageServer must be embedded to have forward compatible implementations.
-type UnimplementedMediaStorageServer struct{}
+type UnimplementedMediaStorageServer struct {
+}
 
 func (UnimplementedMediaStorageServer) UploadFile(MediaStorage_UploadFileServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadFile not implemented")
 }
-
 func (UnimplementedMediaStorageServer) DownloadFileByName(*DownloadFileRequest, MediaStorage_DownloadFileByNameServer) error {
 	return status.Errorf(codes.Unimplemented, "method DownloadFileByName not implemented")
 }
-
 func (UnimplementedMediaStorageServer) CheckForFileByName(context.Context, *CheckForFileRequest) (*CheckForFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckForFileByName not implemented")
 }
-
 func (UnimplementedMediaStorageServer) GetFilesWithMetadata(context.Context, *GetFilesByMetadataRequest) (*GetFilesByMetadataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFilesWithMetadata not implemented")
 }
-
 func (UnimplementedMediaStorageServer) DeleteFilesWithMetaData(context.Context, *DeleteFilesWithMetaDataRequest) (*DeleteFilesWithMetaDataResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteFilesWithMetaData not implemented")
 }
