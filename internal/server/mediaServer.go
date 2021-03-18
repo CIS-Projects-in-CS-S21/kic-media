@@ -214,9 +214,17 @@ func (m *MediaStorageServer) DeleteFilesWithMetaData(
 	if err != nil {
 		m.logger.Infof("%v", err)
 		return &pbmedia.DeleteFilesWithMetaDataResponse{
-			Error: pbmedia.DeleteFileError_ACCESS_DENIED,
 		}, err
 	}
 
 	return &pbmedia.DeleteFilesWithMetaDataResponse{}, nil
+}
+
+
+func (m *MediaStorageServer) UpdateFilesWithMetadata(context.Context, *pbmedia.UpdateFilesWithMetadataRequest) (*pbmedia.UpdateFilesWithMetadataResponse, error) {
+	return nil, nil
+}
+
+func (m *MediaStorageServer) AddCommentToFile(context.Context, *pbmedia.AddCommentToFileRequest) (*pbmedia.AddCommentToFileResponse, error) {
+	return nil, nil
 }
