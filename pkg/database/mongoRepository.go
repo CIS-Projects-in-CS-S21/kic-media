@@ -181,3 +181,33 @@ func (m *MongoRepository) DeleteFilesWithMetadata(
 	}
 	return nil
 }
+
+
+func (m *MongoRepository) UpdateFilesWithMetadata(
+	ctx context.Context,
+	meta map[string]string,
+	strict pbmedia.MetadataStrictness,
+) error {
+
+	filter := bson.M{}
+
+	cur, err := m.fileCollection.Find(ctx, filter)
+	if err != nil {
+		m.logger.Errorf("Error finding files: %v", err)
+	}
+
+	for cur.Next(context.Background()) {
+
+	}
+
+	return nil;
+}
+
+
+func (m *MongoRepository) AddCommentToFile(
+	ctx context.Context,
+	meta map[string]string,
+	strict pbmedia.MetadataStrictness,
+) error {
+	return nil;
+}
