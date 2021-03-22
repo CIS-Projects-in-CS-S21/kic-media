@@ -128,12 +128,9 @@ func (m *MediaStorageServer) DownloadFileByName(
 		return err
 	}
 
+	// returning a nil chunk when the filename is left blank
 	if file.FileName == "" {
-		stream.Send(&pbmedia.DownloadFileResponse{
-			Data: &pbmedia.DownloadFileResponse_Error{
-				Error: pbmedia.DownloadFileByNameError_FILE_NOT_FOUND,
-			},
-		})
+		stream.Send(&pbmedia.DownloadFileResponse{Chunk: nil})
 	}
 
 	buffer, err := m.cloudStore.DownloadFile(file.FileName)
@@ -150,9 +147,7 @@ func (m *MediaStorageServer) DownloadFileByName(
 		toSend := buffer.Next(packetSize)
 
 		err := stream.Send(&pbmedia.DownloadFileResponse{
-			Data: &pbmedia.DownloadFileResponse_Chunk{
-				Chunk: toSend,
-			},
+			Chunk: toSend,
 		})
 
 		if err != nil {
