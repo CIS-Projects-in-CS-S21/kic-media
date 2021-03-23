@@ -128,9 +128,9 @@ func (m *MediaStorageServer) DownloadFileByName(
 		return err
 	}
 
-	// returning a nil chunk when the filename is left blank
 	if file.FileName == "" {
-		stream.Send(&pbmedia.DownloadFileResponse{Chunk: nil})
+		stream.Send(nil) // returning nil response when the filename is left blank
+		return status.Errorf(codes.NotFound, "File name field left empty")
 	}
 
 	buffer, err := m.cloudStore.DownloadFile(file.FileName)
@@ -217,9 +217,5 @@ func (m *MediaStorageServer) DeleteFilesWithMetaData(
 
 
 func (m *MediaStorageServer) UpdateFilesWithMetadata(context.Context, *pbmedia.UpdateFilesWithMetadataRequest) (*pbmedia.UpdateFilesWithMetadataResponse, error) {
-	return nil, nil
-}
-
-func (m *MediaStorageServer) AddCommentToFile(context.Context, *pbmedia.AddCommentToFileRequest) (*pbmedia.AddCommentToFileResponse, error) {
 	return nil, nil
 }
