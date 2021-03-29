@@ -129,7 +129,6 @@ func (m *MediaStorageServer) DownloadFileByName(
 	}
 
 	if file.FileName == "" {
-		stream.Send(nil) // returning nil response when the filename is left blank
 		return status.Errorf(codes.NotFound, "File name field left empty")
 	}
 
