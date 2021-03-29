@@ -170,7 +170,7 @@ func (m *MediaStorageServer) CheckForFileByName(ctx context.Context, req *pbmedi
 		m.logger.Infof("%v", err)
 		return &pbmedia.CheckForFileResponse{
 			Exists: false,
-		}, nil
+		}, status.Errorf(codes.NotFound, "File not found")
 	}
 
 	m.logger.Debugf("Found this file: %v", file.FileName)
@@ -191,7 +191,7 @@ func (m *MediaStorageServer) GetFilesWithMetadata(
 		m.logger.Infof("%v", err)
 		return &pbmedia.GetFilesByMetadataResponse{
 			FileInfos: nil,
-		}, err
+		}, status.Errorf(codes.Internal, "Error finding or decoding files with metadata")
 	}
 
 	return &pbmedia.GetFilesByMetadataResponse{
@@ -209,13 +209,26 @@ func (m *MediaStorageServer) DeleteFilesWithMetaData(
 	if err != nil {
 		m.logger.Infof("%v", err)
 		return &pbmedia.DeleteFilesWithMetaDataResponse{
-		}, err
+			Success: false,
+		}, status.Errorf(codes.Internal, "Error finding or deleting files")
 	}
 
-	return &pbmedia.DeleteFilesWithMetaDataResponse{}, nil
+	return &pbmedia.DeleteFilesWithMetaDataResponse{Success: true}, nil
 }
 
+func (m *MediaStorageServer) UpdateFilesWithMetadata(
+	ctx context.Context,
+	req *pbmedia.UpdateFilesWithMetadataRequest,
+) (*pbmedia.UpdateFilesWithMetadataResponse, error) {
+	err := m.db.UpdateFilesWithMetadata(ctx, req.FilterMetadata, req.DesiredMetadata, req.Strictness, req.UpdateFlag)
 
-func (m *MediaStorageServer) UpdateFilesWithMetadata(context.Context, *pbmedia.UpdateFilesWithMetadataRequest) (*pbmedia.UpdateFilesWithMetadataResponse, error) {
-	return nil, nil
+	// If error, return empty response and err
+	if err != nil {
+		return &pbmedia.UpdateFilesWithMetadataResponse{
+		}, status.Errorf(codes.Internal, "Error updating file metadata")
+	}
+
+	res := &pbmedia.UpdateFilesWithMetadataResponse{NumFilesUpdated: 1}
+
+	return res, err
 }

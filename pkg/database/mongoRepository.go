@@ -187,7 +187,8 @@ func (m *MongoRepository) DeleteFilesWithMetadata(
 
 func (m *MongoRepository) UpdateFilesWithMetadata(
 	ctx context.Context,
-	meta map[string]string,
+	targetMetaData map[string]string,
+	desiredMetaData map[string]string,
 	strict pbmedia.MetadataStrictness,
 	updateFlag pbmedia.UpdateFlag,
 ) error {
@@ -197,7 +198,6 @@ func (m *MongoRepository) UpdateFilesWithMetadata(
 	if err != nil {
 		m.logger.Errorf("Error finding files: %v", err)
 	}
-
 
 	for cur.Next(context.TODO()) {
 		file := &pbcommon.File{}
@@ -209,17 +209,17 @@ func (m *MongoRepository) UpdateFilesWithMetadata(
 
 		var res bool
 		if strict == pbmedia.MetadataStrictness_STRICT {
-			res = compareMetadataStrict(meta, file.Metadata)
+			res = compareMetadataStrict(targetMetaData, file.Metadata)
 		} else if strict == pbmedia.MetadataStrictness_CASUAL {
-			res = compareMetadataCasual(meta, file.Metadata)
+			res = compareMetadataCasual(targetMetaData, file.Metadata)
 		}
 		if res {
 			if updateFlag == pbmedia.UpdateFlag_OVERWRITE { // if overwriting metadata
-				for key,value := range meta {
+				for key,value := range desiredMetaData {
 					file.Metadata[key] = value
 				}
 			} else { // if we wish to append metadata
-				err = appendMetaData(file.Metadata, meta) // appending new metadata to existing metadata
+				err = appendMetaData(file.Metadata, desiredMetaData) // appending new metadata to existing metadata
 
 				if err != nil {
 					return err
