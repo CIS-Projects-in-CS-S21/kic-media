@@ -216,8 +216,10 @@ func (m *MediaStorageServer) DeleteFilesWithMetaData(
 	return &pbmedia.DeleteFilesWithMetaDataResponse{Success: true}, nil
 }
 
-
-func (m *MediaStorageServer) UpdateFilesWithMetadata(ctx context.Context, req *pbmedia.UpdateFilesWithMetadataRequest) (*pbmedia.UpdateFilesWithMetadataResponse, error) {
+func (m *MediaStorageServer) UpdateFilesWithMetadata(
+	ctx context.Context,
+	req *pbmedia.UpdateFilesWithMetadataRequest,
+) (*pbmedia.UpdateFilesWithMetadataResponse, error) {
 	err := m.db.UpdateFilesWithMetadata(ctx, req.FilterMetadata, req.DesiredMetadata, req.Strictness, req.UpdateFlag)
 
 	// If error, return empty response and err
