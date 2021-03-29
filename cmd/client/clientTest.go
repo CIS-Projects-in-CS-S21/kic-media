@@ -9,15 +9,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"io"
 	"log"
 	"os"
-	"time"
-
-	"google.golang.org/grpc"
 
 	pbcommon "github.com/kic/media/pkg/proto/common"
 	pbmedia "github.com/kic/media/pkg/proto/media"
+	pbusers "github.com/kic/media/pkg/proto/users"
 )
 
 func main() {
@@ -28,6 +28,24 @@ func main() {
 	defer conn.Close()
 	client := pbmedia.NewMediaStorageClient(conn)
 
+
+	// User client for auth
+
+	usersClient := pbusers.NewUsersClient(conn)
+
+	// get JWT
+	tokRes, err := usersClient.GetJWTToken(context.Background(), &pbusers.GetJWTTokenRequest{
+		Username: "testuser",
+		Password: "testpass",
+	})
+
+	// creating auth context
+	md := metadata.Pairs("Authorization", fmt.Sprintf("Bearer %v", tokRes.Token))
+	authCtx := metadata.NewOutgoingContext(context.Background(), md)
+
+	// -----------------
+
+
 	in := &pbmedia.CheckForFileRequest{
 		FileInfo: &pbcommon.File{
 			FileName:     "testerino",
@@ -35,7 +53,7 @@ func main() {
 			Metadata:     map[string]string{"test": "test"},
 		},
 	}
-	res, err := client.CheckForFileByName(context.Background(), in)
+	res, err := client.CheckForFileByName(authCtx, in)
 
 	fmt.Printf("res: %v\nerr: %v\n", res, err)
 
@@ -45,10 +63,10 @@ func main() {
 	}
 	defer file.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	//defer cancel()
 
-	stream, err := client.UploadFile(ctx)
+	stream, err := client.UploadFile(authCtx)
 	if err != nil {
 		log.Fatal("cannot upload image: ", err)
 	}
@@ -101,7 +119,7 @@ func main() {
 
 	log.Printf("image uploaded with id: %s, size: %d", resp.FileID, resp.BytesRead)
 
-	dlStream, err := client.DownloadFileByName(context.Background(), &pbmedia.DownloadFileRequest{
+	dlStream, err := client.DownloadFileByName(authCtx, &pbmedia.DownloadFileRequest{
 		FileInfo: &pbcommon.File{
 			FileName: "Makefile",
 		},
@@ -137,5 +155,47 @@ func main() {
 	writer.Flush()
 
 	log.Printf("wrote %v bytes", n)
+
+	// Updating files --------------------
+
+	// creating update request
+	updateReq := &pbmedia.UpdateFilesWithMetadataRequest{
+		Strictness: pbmedia.MetadataStrictness_CASUAL,
+		UpdateFlag: pbmedia.UpdateFlag_OVERWRITE,
+		FilterMetadata: map[string]string{
+			"rsc": "3711",
+		},
+		DesiredMetadata: map[string]string{
+			"rsc": "42",
+		},
+	}
+
+	updateRes, err := client.UpdateFilesWithMetadata(authCtx, updateReq)
+
+	if err != nil {
+		log.Fatal("could not update file: ", err)
+	}
+
+	fmt.Printf("Update res: %v\nUpdate err: %v\n", updateRes, err)
+	// ------------------------------------
+
+	// Deleting files -----------------------
+
+	deleteReq := &pbmedia.DeleteFilesWithMetaDataRequest{Metadata: map[string]string{
+		"rsc": "42",
+	},
+	Strictness: pbmedia.MetadataStrictness_CASUAL,
+	}
+
+	deleteRes, err := client.DeleteFilesWithMetaData(authCtx, deleteReq)
+	if err != nil {
+		log.Fatal("could not delete file: ", err)
+	}
+
+	log.Printf("Delete res: %v\nDelete err: %v\n", deleteRes, err)
+
+	// --------------------------------------
+
+
 
 }

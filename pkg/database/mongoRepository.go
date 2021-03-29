@@ -2,12 +2,14 @@ package database
 
 import (
 	"context"
+	"errors"
 	pbcommon "github.com/kic/media/pkg/proto/common"
 	pbmedia "github.com/kic/media/pkg/proto/media"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
+	"strings"
 )
 
 const (
@@ -177,6 +179,99 @@ func (m *MongoRepository) DeleteFilesWithMetadata(
 			}
 			m.logger.Infof("Deleted file: %v", file)
 
+		}
+	}
+	return nil
+}
+
+
+func (m *MongoRepository) UpdateFilesWithMetadata(
+	ctx context.Context,
+	targetMetaData map[string]string,
+	desiredMetaData map[string]string,
+	strict pbmedia.MetadataStrictness,
+	updateFlag pbmedia.UpdateFlag,
+) error {
+	filter := bson.M{}
+
+	cur, err := m.fileCollection.Find(ctx, filter)
+	if err != nil {
+		m.logger.Errorf("Error finding files: %v", err)
+	}
+
+	for cur.Next(context.TODO()) {
+		file := &pbcommon.File{}
+		err = cur.Decode(file)
+		if err != nil {
+			m.logger.Errorf("Error decoding file: %v", err)
+			return err
+		}
+
+		var res bool
+		if strict == pbmedia.MetadataStrictness_STRICT {
+			res = compareMetadataStrict(targetMetaData, file.Metadata)
+		} else if strict == pbmedia.MetadataStrictness_CASUAL {
+			res = compareMetadataCasual(targetMetaData, file.Metadata)
+		}
+		if res {
+			if updateFlag == pbmedia.UpdateFlag_OVERWRITE { // if overwriting metadata
+				for key,value := range desiredMetaData {
+					file.Metadata[key] = value
+				}
+			} else { // if we wish to append metadata
+				err = appendMetaData(file.Metadata, desiredMetaData) // appending new metadata to existing metadata
+
+				if err != nil {
+					return err
+				}
+			}
+
+			// getting id of document to update
+			var hexId HexId
+			err = cur.Decode(&hexId)
+
+			// filter to be used to locate the entry to be updated
+			filter := bson.M{
+				"_id": hexId.ID,
+			}
+
+			// update structure which will be used to update entry in MongoDB database
+			update := bson.M{
+				"$set": bson.M{
+					"metadata": file.Metadata,
+				},
+			}
+
+			// updating the db with the new data
+			_, err := m.fileCollection.UpdateOne(
+				context.Background(),
+				filter,
+				update,
+			)
+
+			if err != nil {
+				return err
+			}
+
+		}
+	}
+	return nil
+}
+
+func appendMetaData(target, appendage map[string]string) error {
+	for key,value := range appendage { // iterating through entries in map of new metadata
+		if val, ok := target[key]; ok {
+			if val[0] == '[' { // if it's a list
+				bracketPos := strings.Index(val, "]") // getting position of ]
+				target[key] = val[:bracketPos] + "," + val + "]"
+			} else if val[0] == '{' { // if it's a dictionary
+				bracketPos := strings.Index(val, "}") // getting position of }
+				target[key] = val[:bracketPos] + "," + val + "}"
+			} else { // if it's neither a list nor a dictionary
+				return errors.New("trying to append to a scalar value")
+			}
+		} else {
+			target[key] = value
 		}
 	}
 	return nil

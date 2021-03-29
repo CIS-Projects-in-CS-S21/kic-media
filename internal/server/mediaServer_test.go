@@ -230,7 +230,7 @@ func TestMediaStorageServer_DeleteFilesWithMetaData(t *testing.T) {
 	meta := map[string]string{
 		"UID":  "deleteMe",
 	}
-	resp, err := client.DeleteFilesWithMetaData(context.Background(), &pbmedia.DeleteFilesWithMetaDataRequest{
+	_, err := client.DeleteFilesWithMetaData(context.Background(), &pbmedia.DeleteFilesWithMetaDataRequest{
 		Metadata: meta,
 		Strictness: pbmedia.MetadataStrictness_STRICT,
 	})
@@ -238,7 +238,6 @@ func TestMediaStorageServer_DeleteFilesWithMetaData(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to delete files: %v", err)
 	}
-	log.Infof("resp err: %v", resp.Error)
 
 	checkResp, err := client.GetFilesWithMetadata(context.Background(), &pbmedia.GetFilesByMetadataRequest{
 		DesiredMetadata: meta,
