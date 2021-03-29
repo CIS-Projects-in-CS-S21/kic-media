@@ -209,13 +209,24 @@ func (m *MediaStorageServer) DeleteFilesWithMetaData(
 	if err != nil {
 		m.logger.Infof("%v", err)
 		return &pbmedia.DeleteFilesWithMetaDataResponse{
+			Success: false,
 		}, err
 	}
 
-	return &pbmedia.DeleteFilesWithMetaDataResponse{}, nil
+	return &pbmedia.DeleteFilesWithMetaDataResponse{Success: true}, nil
 }
 
 
-func (m *MediaStorageServer) UpdateFilesWithMetadata(context.Context, *pbmedia.UpdateFilesWithMetadataRequest) (*pbmedia.UpdateFilesWithMetadataResponse, error) {
-	return nil, nil
+func (m *MediaStorageServer) UpdateFilesWithMetadata(ctx context.Context, req *pbmedia.UpdateFilesWithMetadataRequest) (*pbmedia.UpdateFilesWithMetadataResponse, error) {
+	err := m.db.UpdateFilesWithMetadata(ctx, req.FilterMetadata, req.DesiredMetadata, req.Strictness, req.UpdateFlag)
+
+	// If error, return empty response and err
+	if err != nil {
+		return &pbmedia.UpdateFilesWithMetadataResponse{
+		}, err
+	}
+
+	res := &pbmedia.UpdateFilesWithMetadataResponse{NumFilesUpdated: 1}
+
+	return res, err
 }

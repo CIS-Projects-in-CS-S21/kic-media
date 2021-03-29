@@ -14,4 +14,5 @@ type Repository interface {
 	GetFilesWithMetadata(context.Context, map[string]string, pbmedia.MetadataStrictness) ([]*pbcommon.File, error)
 	GetFileWithName(context.Context, string) (*pbcommon.File, error)
 	DeleteFilesWithMetadata(context.Context, map[string]string, pbmedia.MetadataStrictness) error
+	UpdateFilesWithMetadata(ctx context.Context, targetMetaData map[string]string, desiredMetaData map[string]string, strict pbmedia.MetadataStrictness, updateFlag pbmedia.UpdateFlag) error
 }
