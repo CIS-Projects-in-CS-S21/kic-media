@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"context"
-	"io"
 	"math"
 
 	"go.uber.org/zap"
@@ -45,74 +44,43 @@ func NewMediaStorageServer(db database.Repository, cloudStore cloudstorage.Cloud
 
 // UploadFile - allows a client to upload a file in a stream the server which will then
 // store the file information in the database, and store the file in cloud storage
-func (m *MediaStorageServer) UploadFile(stream pbmedia.MediaStorage_UploadFileServer) error {
-	req, err := stream.Recv()
-	if err != nil {
-		m.logger.Infof("%v", err)
-		return status.Errorf(codes.Unknown, "File Data could not be received")
-	}
+func (m *MediaStorageServer) UploadFile(ctx context.Context, req *pbmedia.UploadFileRequest) (*pbmedia.UploadFileResponse, error) {
 	fileInfo := req.GetFileInfo()
 	m.logger.Debugf("FileName: %v", fileInfo.FileName)
 	m.logger.Debugf("FileLocation: %v", fileInfo.FileLocation)
 	m.logger.Debugf("Metadata: %v", fileInfo.Metadata)
 
+
+
 	data := bytes.Buffer{}
-	bytesRead := uint64(0)
 
-	for {
-		m.logger.Info("Waiting for file byte data")
+	file := req.GetFile()
 
-		req, err := stream.Recv()
-		if err == io.EOF {
-			m.logger.Info("Stream closed")
-			break
-		}
-		if err != nil {
-			m.logger.Infof("%v", err)
-			return status.Errorf(codes.Unknown, "cannot receive chunk data: %v", err)
-		}
+	bytesRead := len(file)
+	data.Write(file)
 
-		chunk := req.GetChunk()
-		size := len(chunk)
-
-		m.logger.Debugf("received a chunk with size: %d", size)
-
-		bytesRead += uint64(size)
-		if bytesRead > maxImageSize {
-			m.logger.Infof("%v", err)
-			return status.Errorf(codes.InvalidArgument, "file is too large: %d > %d", bytesRead, maxImageSize)
-		}
-		_, err = data.Write(chunk)
-		if err != nil {
-			m.logger.Infof("%v", err)
-			return status.Errorf(codes.Internal, "Could not write file")
-		}
+	if bytesRead > maxImageSize {
+		m.logger.Info("oversized file")
+		return nil, status.Errorf(codes.InvalidArgument, "file is too large: %d > %d", bytesRead, maxImageSize)
 	}
 
-	err = m.cloudStore.UploadFile(fileInfo.FileName, data)
+	err := m.cloudStore.UploadFile(fileInfo.FileName, data)
 
 	if err != nil {
 		m.logger.Infof("%v", err)
-		return status.Errorf(codes.Internal, "Could not write file")
+		return nil, status.Errorf(codes.Internal, "Could not write file")
 	}
 
 	id, err := m.db.AddFile(context.TODO(), fileInfo)
 
 	res := &pbmedia.UploadFileResponse{
 		FileID:    id,
-		BytesRead: bytesRead,
-	}
-
-	err = stream.SendAndClose(res)
-
-	if err != nil {
-		m.logger.Infof("%v", err)
-		return status.Errorf(codes.Unknown, "cannot send response: %v", err)
+		BytesRead: uint64(bytesRead),
 	}
 
 	m.logger.Debugf("saved image with id: %s, size: %d", res.FileID, bytesRead)
 
-	return nil
+	return res, nil
 }
 
 // DownloadFileByName - allows a client to request a file for download from cloud storage

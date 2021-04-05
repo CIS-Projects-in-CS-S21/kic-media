@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -45,7 +46,6 @@ func main() {
 
 	// -----------------
 
-
 	in := &pbmedia.CheckForFileRequest{
 		FileInfo: &pbcommon.File{
 			FileName:     "testerino",
@@ -57,65 +57,35 @@ func main() {
 
 	fmt.Printf("res: %v\nerr: %v\n", res, err)
 
-	file, err := os.Open("Makefile")
+
+	buffer, err := ioutil.ReadFile("Makefile")
+
 	if err != nil {
-		log.Fatal("cannot open image file: ", err)
+		log.Fatal("cannot read file: ", err)
 	}
-	defer file.Close()
 
-	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	//defer cancel()
 
-	stream, err := client.UploadFile(authCtx)
+	req := &pbmedia.UploadFileRequest{
+		FileInfo: &pbcommon.File{
+			FileName:     "Makefile",
+			FileLocation: "test",
+			Metadata: map[string]string{
+				"rsc": "3711",
+				"r":   "2138",
+				"gri": "1908",
+				"adg": "912",
+			},
+		},
+		File: buffer,
+	}
+
+
+	resp, err := client.UploadFile(authCtx, req)
+
 	if err != nil {
 		log.Fatal("cannot upload image: ", err)
 	}
 
-	req := &pbmedia.UploadFileRequest{
-		Data: &pbmedia.UploadFileRequest_FileInfo{
-			FileInfo: &pbcommon.File{
-				FileName:     "Makefile",
-				FileLocation: "test",
-				Metadata: map[string]string{
-					"rsc": "3711",
-					"r":   "2138",
-					"gri": "1908",
-					"adg": "912",
-				},
-			},
-		},
-	}
-
-	stream.Send(req)
-
-	reader := bufio.NewReader(file)
-	buffer := make([]byte, 1024)
-
-	for {
-		n, err := reader.Read(buffer)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatal("cannot read chunk to buffer: ", err)
-		}
-
-		req := &pbmedia.UploadFileRequest{
-			Data: &pbmedia.UploadFileRequest_Chunk{
-				Chunk: buffer[:n],
-			},
-		}
-
-		err = stream.Send(req)
-		if err != nil {
-			log.Fatal("cannot send chunk to server: ", err)
-		}
-	}
-
-	resp, err := stream.CloseAndRecv()
-	if err != nil {
-		log.Fatal("cannot receive response: ", err)
-	}
 
 	log.Printf("image uploaded with id: %s, size: %d", resp.FileID, resp.BytesRead)
 
