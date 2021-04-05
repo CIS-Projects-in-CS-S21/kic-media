@@ -21,7 +21,7 @@ type MediaStorageClient interface {
 	// Send a file as a stream of messages, starting with a message containing a File message, then
 	// followed by an arbitrary number of messages containing bytes representing the file. The response
 	// will then confirm the number of bytes received or provide an error.
-	UploadFile(ctx context.Context, opts ...grpc.CallOption) (MediaStorage_UploadFileClient, error)
+	UploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error)
 	//
 	// Using the same format as above, the service allows the client to retrieve a stored file.
 	DownloadFileByName(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (MediaStorage_DownloadFileByNameClient, error)
@@ -45,42 +45,17 @@ func NewMediaStorageClient(cc grpc.ClientConnInterface) MediaStorageClient {
 	return &mediaStorageClient{cc}
 }
 
-func (c *mediaStorageClient) UploadFile(ctx context.Context, opts ...grpc.CallOption) (MediaStorage_UploadFileClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_MediaStorage_serviceDesc.Streams[0], "/kic.media.MediaStorage/UploadFile", opts...)
+func (c *mediaStorageClient) UploadFile(ctx context.Context, in *UploadFileRequest, opts ...grpc.CallOption) (*UploadFileResponse, error) {
+	out := new(UploadFileResponse)
+	err := c.cc.Invoke(ctx, "/kic.media.MediaStorage/UploadFile", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &mediaStorageUploadFileClient{stream}
-	return x, nil
-}
-
-type MediaStorage_UploadFileClient interface {
-	Send(*UploadFileRequest) error
-	CloseAndRecv() (*UploadFileResponse, error)
-	grpc.ClientStream
-}
-
-type mediaStorageUploadFileClient struct {
-	grpc.ClientStream
-}
-
-func (x *mediaStorageUploadFileClient) Send(m *UploadFileRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *mediaStorageUploadFileClient) CloseAndRecv() (*UploadFileResponse, error) {
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	m := new(UploadFileResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 func (c *mediaStorageClient) DownloadFileByName(ctx context.Context, in *DownloadFileRequest, opts ...grpc.CallOption) (MediaStorage_DownloadFileByNameClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_MediaStorage_serviceDesc.Streams[1], "/kic.media.MediaStorage/DownloadFileByName", opts...)
+	stream, err := c.cc.NewStream(ctx, &_MediaStorage_serviceDesc.Streams[0], "/kic.media.MediaStorage/DownloadFileByName", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +130,7 @@ type MediaStorageServer interface {
 	// Send a file as a stream of messages, starting with a message containing a File message, then
 	// followed by an arbitrary number of messages containing bytes representing the file. The response
 	// will then confirm the number of bytes received or provide an error.
-	UploadFile(MediaStorage_UploadFileServer) error
+	UploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error)
 	//
 	// Using the same format as above, the service allows the client to retrieve a stored file.
 	DownloadFileByName(*DownloadFileRequest, MediaStorage_DownloadFileByNameServer) error
@@ -176,8 +151,8 @@ type MediaStorageServer interface {
 type UnimplementedMediaStorageServer struct {
 }
 
-func (UnimplementedMediaStorageServer) UploadFile(MediaStorage_UploadFileServer) error {
-	return status.Errorf(codes.Unimplemented, "method UploadFile not implemented")
+func (UnimplementedMediaStorageServer) UploadFile(context.Context, *UploadFileRequest) (*UploadFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UploadFile not implemented")
 }
 func (UnimplementedMediaStorageServer) DownloadFileByName(*DownloadFileRequest, MediaStorage_DownloadFileByNameServer) error {
 	return status.Errorf(codes.Unimplemented, "method DownloadFileByName not implemented")
@@ -207,30 +182,22 @@ func RegisterMediaStorageServer(s grpc.ServiceRegistrar, srv MediaStorageServer)
 	s.RegisterService(&_MediaStorage_serviceDesc, srv)
 }
 
-func _MediaStorage_UploadFile_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(MediaStorageServer).UploadFile(&mediaStorageUploadFileServer{stream})
-}
-
-type MediaStorage_UploadFileServer interface {
-	SendAndClose(*UploadFileResponse) error
-	Recv() (*UploadFileRequest, error)
-	grpc.ServerStream
-}
-
-type mediaStorageUploadFileServer struct {
-	grpc.ServerStream
-}
-
-func (x *mediaStorageUploadFileServer) SendAndClose(m *UploadFileResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *mediaStorageUploadFileServer) Recv() (*UploadFileRequest, error) {
-	m := new(UploadFileRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
+func _MediaStorage_UploadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadFileRequest)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	return m, nil
+	if interceptor == nil {
+		return srv.(MediaStorageServer).UploadFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/kic.media.MediaStorage/UploadFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MediaStorageServer).UploadFile(ctx, req.(*UploadFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _MediaStorage_DownloadFileByName_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -331,6 +298,10 @@ var _MediaStorage_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*MediaStorageServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "UploadFile",
+			Handler:    _MediaStorage_UploadFile_Handler,
+		},
+		{
 			MethodName: "CheckForFileByName",
 			Handler:    _MediaStorage_CheckForFileByName_Handler,
 		},
@@ -348,11 +319,6 @@ var _MediaStorage_serviceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "UploadFile",
-			Handler:       _MediaStorage_UploadFile_Handler,
-			ClientStreams: true,
-		},
 		{
 			StreamName:    "DownloadFileByName",
 			Handler:       _MediaStorage_DownloadFileByName_Handler,
