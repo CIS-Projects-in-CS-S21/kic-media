@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	// 2 MB
-	maxImageSize = 2 << 20
+	// 10 MB
+	maxImageSize = 10 << 20
 	// Size of each message when we server-side stream a file to a client
-	packetSize = 1024
+	packetSize = 10 << 20
 )
 
 // MediaStorageServer - Implements the generated interface to be a media storage server handler
