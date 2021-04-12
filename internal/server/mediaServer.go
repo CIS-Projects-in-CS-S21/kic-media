@@ -54,10 +54,10 @@ func (m *MediaStorageServer) UploadFile(ctx context.Context, req *pbmedia.Upload
 
 	data := bytes.Buffer{}
 
-	file := req.GetFile()
+	file := req.GetFileURI()
 
 	bytesRead := len(file)
-	data.Write(file)
+	data.Write([]byte(file))
 
 	if bytesRead > maxImageSize {
 		m.logger.Info("oversized file")
@@ -114,7 +114,7 @@ func (m *MediaStorageServer) DownloadFileByName(
 		toSend := buffer.Next(packetSize)
 
 		err := stream.Send(&pbmedia.DownloadFileResponse{
-			Chunk: toSend,
+			Chunk: string(toSend),
 		})
 
 		if err != nil {
