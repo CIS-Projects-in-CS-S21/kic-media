@@ -1,7 +1,6 @@
 package server_test
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"github.com/kic/media/internal/server"
@@ -218,7 +217,7 @@ func TestMediaStorageServer_CheckForFileByName(t *testing.T) {
 	for _, req := range incorrectRequests {
 		res, err := client.CheckForFileByName(context.Background(), req)
 		log.Debugf("%v %v", res, err)
-		if err != nil || res.Exists == true {
+		if err == nil {
 			t.Errorf("File that should not be in db is reported as there")
 		}
 	}
@@ -427,31 +426,42 @@ func TestMediaStorageServer_DownloadFileByName(t *testing.T) {
 }
 
 func TestMediaStorageServer_UploadFile(t *testing.T) {
-	tests := []testUploadFile{
-		{
-			filePath:   "../../test_data/Animals-Dog-icon.png",
-			uploadPath: "animal_test.png",
-			checkPath:  "../../test_data/animal_test.png",
-			shouldErr:  false,
+	testFiles := []*pbcommon.File{
+		&pbcommon.File{
+			FileName:     "Animals-Dog-icon.png",
+			FileLocation: "../../test_data/Animals-Dog-icon.png",
+			Metadata:     nil,
+			DateStored:   &pbcommon.Date{
+				Year:  2021,
+				Month: 4,
+				Day:   12,
+			},
 		},
-		{
-			filePath:   "../../test_data/term.png",
-			uploadPath: "term_test.png",
-			checkPath:  "../../test_data/term_test.png",
-			shouldErr:  false,
+
+		&pbcommon.File{
+			FileName:     "term.png",
+			FileLocation: "../../test_data/term.png",
+			Metadata:     nil,
+			DateStored:   &pbcommon.Date{
+				Year:  2021,
+				Month: 4,
+				Day:   12,
+			},
 		},
 	}
 
-	for i, test := range tests {
-		resp, err := sendFile(test.filePath, test.uploadPath)
+
+
+	for i, test := range testFiles {
+		resp, err := sendFile(test, test.FileLocation)
 		if err != nil || resp.BytesRead == 0 {
 			t.Errorf("Test %v upload file failure", i)
 		}
-		fi, err := os.Open(test.filePath)
+		fi, err := os.Open(test.FileLocation)
 		if err != nil {
 			t.Errorf("Test %v upload file failure: %v", i, err)
 		}
-		fo, err := os.Open(test.checkPath)
+		fo, err := os.Open(test.FileLocation)
 		if err != nil {
 			t.Errorf("Test %v upload file failure: %v", i, err)
 		}
@@ -470,8 +480,8 @@ func TestMediaStorageServer_UploadFile(t *testing.T) {
 	}
 }
 
-func sendFile(filePath, uploadName string) (*pbmedia.UploadFileResponse, error) {
-	file, err := os.Open(filePath)
+func sendFile(fileInfo *pbcommon.File, uploadName string) (*pbmedia.UploadFileResponse, error) {
+	file, err := os.Open(fileInfo.FileLocation)
 	if err != nil {
 		log.Fatal("cannot open file: ", err)
 	}
@@ -480,51 +490,18 @@ func sendFile(filePath, uploadName string) (*pbmedia.UploadFileResponse, error) 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	stream, err := client.UploadFile(ctx)
+	fileBytes, err := ioutil.ReadFile(fileInfo.FileLocation)
+
+	req := &pbmedia.UploadFileRequest{
+		FileInfo: fileInfo,
+		File:     fileBytes,
+	}
+
+	res, err := client.UploadFile(ctx, req)
 	if err != nil {
 		log.Fatal("cannot upload file: ", err)
 	}
 
-	req := &pbmedia.UploadFileRequest{
-		Data: &pbmedia.UploadFileRequest_FileInfo{
-			FileInfo: &pbcommon.File{
-				FileName:     uploadName,
-				FileLocation: "test",
-				Metadata:     map[string]string{},
-			},
-		},
-	}
 
-	stream.Send(req)
-
-	reader := bufio.NewReader(file)
-	buffer := make([]byte, 1024)
-
-	for {
-		n, err := reader.Read(buffer)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatal("cannot read chunk to buffer: ", err)
-		}
-
-		req := &pbmedia.UploadFileRequest{
-			Data: &pbmedia.UploadFileRequest_Chunk{
-				Chunk: buffer[:n],
-			},
-		}
-
-		err = stream.Send(req)
-		if err != nil {
-			log.Fatal("cannot send chunk to server: ", err)
-		}
-	}
-
-	resp, err := stream.CloseAndRecv()
-	if err != nil {
-		log.Fatal("cannot receive response: ", err)
-	}
-
-	return resp, err
+	return res, err
 }
