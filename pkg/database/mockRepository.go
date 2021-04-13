@@ -1,104 +1,141 @@
 package database
 
-
 import (
+	"context"
+	"fmt"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
-	pbcommon "github.com/kic/media/pkg/proto/common"
 	pbmedia "github.com/kic/media/pkg/proto/media"
-
+	pbcommon "github.com/kic/media/pkg/proto/common"
 )
 
 type MockRepository struct {
-	db *map[int]*pbcommon.User
-
-
-
-
-	logger *zap.SugaredLogger
+	fileCollection map[int]*pbcommon.File
 
 	idCounter int
+
+	logger *zap.SugaredLogger
 }
 
 
-func NewMockRepository(db *map[int]*pbcommon.User, logger *zap.SugaredLogger) *MockRepository {
+func NewMockRepository(fileCollection map[int]*pbcommon.File, logger *zap.SugaredLogger) *MockRepository {
 	return &MockRepository{
-		db:     db,
+		fileCollection:     fileCollection,
+		idCounter: 0,
 		logger: logger,
 	}
 }
 
-func searchDBByUsername(db *map[int]*pbcommon.User, username string) (int, *pbcommon.User) {
-	for key, value := range *db {
-		if value.Username == username {
-			return key, value
+
+func (m *MockRepository) AddFile(ctx context.Context, file *pbcommon.File) (string, error) {
+	m.fileCollection[m.idCounter] = file
+	var toReturn string
+	toReturn = fmt.Sprint(m.idCounter)
+		m.idCounter++
+
+	return toReturn, nil
+}
+
+func (m *MockRepository) GetFileWithName(ctx context.Context, fileName string) (*pbcommon.File, error) {
+	var toReturn *pbcommon.File
+	toReturn = nil
+
+	for _, val := range m.fileCollection {
+		if val.FileName == fileName {
+			toReturn = val
 		}
 	}
-	return -1, nil
-}
 
-func (s *MockRepository) checkIfUsernameAvailable(username string) bool {
-	_, user := searchDBByUsername(s.db, username)
-
-	if user.Username == username {
-		return false
+	if toReturn == nil {
+		return nil, status.Errorf(codes.NotFound, "File not found")
 	}
-	return true
+
+	return toReturn, nil
 }
 
-func searchDBByEmail(db *map[int]*pbcommon.User, email string) (int, *pbcommon.User) {
-	for key, value := range *db {
-		if value.Email == email {
-			return key, value
+
+func (m *MockRepository) GetFilesWithMetadata(
+	ctx context.Context,
+	meta map[string]string,
+	strict pbmedia.MetadataStrictness,
+) ([]*pbcommon.File, error) {
+	toReturn := make([]*pbcommon.File, 0)
+
+	for _, val := range m.fileCollection{
+		var res bool
+		if strict == pbmedia.MetadataStrictness_STRICT {
+			res = compareMetadataStrict(meta, val.Metadata)
+		} else if strict == pbmedia.MetadataStrictness_CASUAL {
+			res = compareMetadataCasual(meta, val.Metadata)
+		}
+		if res {
+			toReturn = append(toReturn, val)
 		}
 	}
-	return -1, nil
+
+	return toReturn, nil
 }
 
-func (s *MockRepository) checkIfEmailAvailable(email string) bool {
-	_, user := searchDBByEmail(s.db, email)
+func (m *MockRepository) DeleteFilesWithMetadata(
+	ctx context.Context,
+	meta map[string]string,
+	strict pbmedia.MetadataStrictness,
+) error {
 
-	if user.Email == email {
-		return false
-	}
-	return false
-}
-
-func (s *MockRepository) AddUser(user *pbcommon.User) (int, error) {
-	ok := true
-
-	if !s.checkIfUsernameAvailable(user.Username) {
-		ok = false
-	}
-
-	if !s.checkIfEmailAvailable(user.Email) {
-		ok = false
-	}
-
-	if ok {
-		database := *s.db
-		database[s.idCounter] = user
-		s.idCounter++
-		return s.idCounter - 1, nil
+	for key, val := range m.fileCollection{
+		var res bool
+		if strict == pbmedia.MetadataStrictness_STRICT {
+			res = compareMetadataStrict(meta, val.Metadata)
+		} else if strict == pbmedia.MetadataStrictness_CASUAL {
+			res = compareMetadataCasual(meta, val.Metadata)
+		}
+		if res {
+			delete(m.fileCollection, key)
+		}
 	}
 
-	return -1, nil
-}
 
-func (s *MockRepository) GetUser (user *pbcommon.User) (*pbcommon.User, error) {
-
-
-
-	return nil, nil
-}
-
-func (s *MockRepository) GetUserByID(id int64) (*pbcommon.User, error) {
-
-
-	return nil, nil
-}
-
-func (s *MockRepository) DeleteUserByID(userID int64) error {
 	return nil
 }
+
+
+func (m *MockRepository) UpdateFilesWithMetadata(
+	ctx context.Context,
+	targetMetaData map[string]string,
+	desiredMetaData map[string]string,
+	strict pbmedia.MetadataStrictness,
+	updateFlag pbmedia.UpdateFlag,
+) error {
+	var err error
+	for key, val := range m.fileCollection{
+		var res bool
+		if strict == pbmedia.MetadataStrictness_STRICT {
+			res = compareMetadataStrict(targetMetaData, val.Metadata)
+		} else if strict == pbmedia.MetadataStrictness_CASUAL {
+			res = compareMetadataCasual(targetMetaData, val.Metadata)
+		}
+		if res {
+			if updateFlag == pbmedia.UpdateFlag_OVERWRITE { // if overwriting metadata
+				for key,value := range desiredMetaData {
+					val.Metadata[key] = value
+				}
+			} else { // if we wish to append metadata
+				err = appendMetaData(val.Metadata, desiredMetaData) // appending new metadata to existing metadata
+
+				if err != nil {
+					return err
+				}
+
+			}
+
+			m.fileCollection[key].Metadata = val.Metadata
+		}
+		return err
+	}
+	return nil
+}
+
+
 
