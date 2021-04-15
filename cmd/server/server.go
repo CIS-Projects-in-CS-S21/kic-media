@@ -21,7 +21,6 @@ func main() {
 		logger = logging.CreateLogger(zapcore.DebugLevel)
 	}
 
-
 	repo, mongoClient := setup.DBRepositorySetup(logger, "media")
 
 	serv := setup.GRPCSetup(logger, repo)

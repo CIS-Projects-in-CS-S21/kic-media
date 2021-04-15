@@ -19,7 +19,6 @@ import (
 	pbmedia "github.com/kic/media/pkg/proto/media"
 )
 
-
 // DBRepositorySetup - configure and set up the database repository instance, returning the repository
 // and the underlying mongo client for disconnecting on exit
 func DBRepositorySetup(logger *zap.SugaredLogger, dbPrefix string) (database.Repository, *mongo.Client) {

@@ -70,7 +70,6 @@ func (m *MongoRepository) GetFileWithName(ctx context.Context, fileName string) 
 	return file, nil
 }
 
-
 func compareMetadataStrict(target, stored map[string]string) bool {
 	good := true
 
@@ -184,7 +183,6 @@ func (m *MongoRepository) DeleteFilesWithMetadata(
 	return nil
 }
 
-
 func (m *MongoRepository) UpdateFilesWithMetadata(
 	ctx context.Context,
 	targetMetaData map[string]string,
@@ -215,7 +213,7 @@ func (m *MongoRepository) UpdateFilesWithMetadata(
 		}
 		if res {
 			if updateFlag == pbmedia.UpdateFlag_OVERWRITE { // if overwriting metadata
-				for key,value := range desiredMetaData {
+				for key, value := range desiredMetaData {
 					file.Metadata[key] = value
 				}
 			} else { // if we wish to append metadata
@@ -259,7 +257,7 @@ func (m *MongoRepository) UpdateFilesWithMetadata(
 }
 
 func appendMetaData(target, appendage map[string]string) error {
-	for key,value := range appendage { // iterating through entries in map of new metadata
+	for key, value := range appendage { // iterating through entries in map of new metadata
 		if val, ok := target[key]; ok {
 			if val[0] == '[' { // if it's a list
 				bracketPos := strings.Index(val, "]") // getting position of ]

@@ -29,7 +29,6 @@ func main() {
 	defer conn.Close()
 	client := pbmedia.NewMediaStorageClient(conn)
 
-
 	// User client for auth
 
 	usersClient := pbusers.NewUsersClient(conn)
@@ -57,13 +56,11 @@ func main() {
 
 	fmt.Printf("res: %v\nerr: %v\n", res, err)
 
-
 	buffer, err := ioutil.ReadFile("Makefile")
 
 	if err != nil {
 		log.Fatal("cannot read file: ", err)
 	}
-
 
 	req := &pbmedia.UploadFileRequest{
 		FileInfo: &pbcommon.File{
@@ -79,13 +76,11 @@ func main() {
 		File: buffer,
 	}
 
-
 	resp, err := client.UploadFile(authCtx, req)
 
 	if err != nil {
 		log.Fatal("cannot upload image: ", err)
 	}
-
 
 	log.Printf("image uploaded with id: %s, size: %d", resp.FileID, resp.BytesRead)
 
@@ -154,7 +149,7 @@ func main() {
 	deleteReq := &pbmedia.DeleteFilesWithMetaDataRequest{Metadata: map[string]string{
 		"rsc": "42",
 	},
-	Strictness: pbmedia.MetadataStrictness_CASUAL,
+		Strictness: pbmedia.MetadataStrictness_CASUAL,
 	}
 
 	deleteRes, err := client.DeleteFilesWithMetaData(authCtx, deleteReq)
@@ -165,7 +160,5 @@ func main() {
 	log.Printf("Delete res: %v\nDelete err: %v\n", deleteRes, err)
 
 	// --------------------------------------
-
-
 
 }

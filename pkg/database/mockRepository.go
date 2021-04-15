@@ -7,8 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pbmedia "github.com/kic/media/pkg/proto/media"
 	pbcommon "github.com/kic/media/pkg/proto/common"
+	pbmedia "github.com/kic/media/pkg/proto/media"
 )
 
 type MockRepository struct {
@@ -19,21 +19,19 @@ type MockRepository struct {
 	logger *zap.SugaredLogger
 }
 
-
 func NewMockRepository(fileCollection map[int]*pbcommon.File, logger *zap.SugaredLogger) *MockRepository {
 	return &MockRepository{
-		fileCollection:     fileCollection,
-		idCounter: 0,
-		logger: logger,
+		fileCollection: fileCollection,
+		idCounter:      len(fileCollection),
+		logger:         logger,
 	}
 }
-
 
 func (m *MockRepository) AddFile(ctx context.Context, file *pbcommon.File) (string, error) {
 	m.fileCollection[m.idCounter] = file
 	var toReturn string
 	toReturn = fmt.Sprint(m.idCounter)
-		m.idCounter++
+	m.idCounter++
 
 	return toReturn, nil
 }
@@ -55,7 +53,6 @@ func (m *MockRepository) GetFileWithName(ctx context.Context, fileName string) (
 	return toReturn, nil
 }
 
-
 func (m *MockRepository) GetFilesWithMetadata(
 	ctx context.Context,
 	meta map[string]string,
@@ -63,7 +60,7 @@ func (m *MockRepository) GetFilesWithMetadata(
 ) ([]*pbcommon.File, error) {
 	toReturn := make([]*pbcommon.File, 0)
 
-	for _, val := range m.fileCollection{
+	for _, val := range m.fileCollection {
 		var res bool
 		if strict == pbmedia.MetadataStrictness_STRICT {
 			res = compareMetadataStrict(meta, val.Metadata)
@@ -84,7 +81,7 @@ func (m *MockRepository) DeleteFilesWithMetadata(
 	strict pbmedia.MetadataStrictness,
 ) error {
 
-	for key, val := range m.fileCollection{
+	for key, val := range m.fileCollection {
 		var res bool
 		if strict == pbmedia.MetadataStrictness_STRICT {
 			res = compareMetadataStrict(meta, val.Metadata)
@@ -96,10 +93,8 @@ func (m *MockRepository) DeleteFilesWithMetadata(
 		}
 	}
 
-
 	return nil
 }
-
 
 func (m *MockRepository) UpdateFilesWithMetadata(
 	ctx context.Context,
@@ -109,7 +104,7 @@ func (m *MockRepository) UpdateFilesWithMetadata(
 	updateFlag pbmedia.UpdateFlag,
 ) error {
 	var err error
-	for key, val := range m.fileCollection{
+	for key, val := range m.fileCollection {
 		var res bool
 		if strict == pbmedia.MetadataStrictness_STRICT {
 			res = compareMetadataStrict(targetMetaData, val.Metadata)
@@ -118,7 +113,7 @@ func (m *MockRepository) UpdateFilesWithMetadata(
 		}
 		if res {
 			if updateFlag == pbmedia.UpdateFlag_OVERWRITE { // if overwriting metadata
-				for key,value := range desiredMetaData {
+				for key, value := range desiredMetaData {
 					val.Metadata[key] = value
 				}
 			} else { // if we wish to append metadata
@@ -136,6 +131,3 @@ func (m *MockRepository) UpdateFilesWithMetadata(
 	}
 	return nil
 }
-
-
-

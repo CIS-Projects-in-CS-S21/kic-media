@@ -1,23 +1,16 @@
 package server_test
 
 import (
-	"bytes"
 	"context"
 	"github.com/kic/media/internal/server"
 	"github.com/kic/media/pkg/cloudstorage"
-	"google.golang.org/grpc/reflection"
-	"io"
-	"io/ioutil"
-	"net"
 	"os"
 	"testing"
 	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"google.golang.org/grpc"
 
-	"github.com/kic/media/internal/setup"
 	"github.com/kic/media/pkg/database"
 	"github.com/kic/media/pkg/logging"
 	pbcommon "github.com/kic/media/pkg/proto/common"
@@ -25,22 +18,9 @@ import (
 )
 
 var log *zap.SugaredLogger
-var client pbmedia.MediaStorageClient
+var mediaService *server.MediaStorageServer
 
 const testDataPath = "../../test_data"
-
-type testGetFilesWithMetadata struct {
-	req       *pbmedia.GetFilesByMetadataRequest
-	res       *pbmedia.GetFilesByMetadataResponse
-	shouldErr bool
-}
-
-type testUploadFile struct {
-	filePath   string
-	uploadPath string
-	checkPath  string
-	shouldErr  bool
-}
 
 func prepDBForTests(db database.Repository) {
 
@@ -127,381 +107,153 @@ func TestMain(m *testing.M) {
 	time.Sleep(1 * time.Second)
 	log = logging.CreateLogger(zapcore.DebugLevel)
 
-	repo, mongoClient := setup.DBRepositorySetup(log, "test-media-storage")
+	mp := make(map[int]*pbcommon.File)
+	repo := database.NewMockRepository(mp, log)
 
 	prepDBForTests(repo)
 
-	ListenAddress := "localhost:50051"
-
-	listener, err := net.Listen("tcp", ListenAddress)
-	if err != nil {
-		log.Fatalf("Unable to listen on %v: %v", ListenAddress, err)
-	}
-
-	grpcServer := grpc.NewServer()
-
 	cloudStorage := cloudstorage.NewMockCloudStorage(testDataPath, log)
 
-	mediaService := server.NewMediaStorageServer(repo, cloudStorage, log)
-	pbmedia.RegisterMediaStorageServer(grpcServer, mediaService)
-
-	reflection.Register(grpcServer)
-
-	go func() {
-		defer listener.Close()
-		if err := grpcServer.Serve(listener); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
-		}
-	}()
-
-	log.Infof("Server started on %v", ListenAddress)
-
-	defer grpcServer.Stop()
-	defer mongoClient.Disconnect(context.Background())
-
-	conn, err := grpc.Dial(ListenAddress, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
-	}
-	defer conn.Close()
-	client = pbmedia.NewMediaStorageClient(conn)
+	mediaService = server.NewMediaStorageServer(repo, cloudStorage, log)
 
 	exitVal := m.Run()
 
 	os.Exit(exitVal)
 }
 
-func TestMediaStorageServer_CheckForFileByName(t *testing.T) {
-	correctRequests := []*pbmedia.CheckForFileRequest{
-		{
-			FileInfo: &pbcommon.File{
-				FileName:     "tester1",
-				FileLocation: "test",
-				Metadata:     nil,
-			},
+func Test_ShouldUploadFile(t *testing.T) {
+	resp, err := mediaService.UploadFile(context.Background(), &pbmedia.UploadFileRequest{
+		FileInfo: &pbcommon.File{
+			FileName:     "werwesdf",
+			FileLocation: "werwesdf",
+			Metadata:     nil,
+			DateStored:   nil,
 		},
-		{
-			FileInfo: &pbcommon.File{
-				FileName:     "tester2",
-				FileLocation: "test",
-				Metadata:     nil,
-			},
-		},
+		FileURI: "as456",
+	})
+	if err != nil {
+		t.Errorf("Upload should not fail")
 	}
-
-	incorrectRequests := []*pbmedia.CheckForFileRequest{
-		{
-			FileInfo: &pbcommon.File{
-				FileName:     "notThere1",
-				FileLocation: "test",
-				Metadata:     nil,
-			},
-		},
-		{
-			FileInfo: &pbcommon.File{
-				FileName:     "notThere2",
-				FileLocation: "test",
-				Metadata:     nil,
-			},
-		},
+	if resp.BytesRead != 5 {
+		t.Errorf("Wrong number of bytes returned")
 	}
-
-	for _, req := range correctRequests {
-		res, err := client.CheckForFileByName(context.Background(), req)
-		log.Debugf("%v %v", res, err)
-		if err != nil || res.Exists != true {
-			t.Errorf("File that should be in db is reported as not there")
-		}
-	}
-
-	for _, req := range incorrectRequests {
-		res, err := client.CheckForFileByName(context.Background(), req)
-		log.Debugf("%v %v", res, err)
-		if err == nil {
-			t.Errorf("File that should not be in db is reported as there")
-		}
-	}
-
 }
 
-func TestMediaStorageServer_DeleteFilesWithMetaData(t *testing.T) {
-
-	meta := map[string]string{
-		"UID":  "deleteMe",
+func Test_ShouldFailUploadFile(t *testing.T) {
+	_, err := mediaService.UploadFile(context.Background(), &pbmedia.UploadFileRequest{
+		FileInfo: &pbcommon.File{
+			FileName:     "",
+			FileLocation: "",
+			Metadata:     nil,
+			DateStored:   nil,
+		},
+		FileURI: "as456",
+	})
+	if err == nil {
+		t.Errorf("Upload should fail")
 	}
-	_, err := client.DeleteFilesWithMetaData(context.Background(), &pbmedia.DeleteFilesWithMetaDataRequest{
-		Metadata: meta,
+}
+
+func Test_ShouldCheckForFileByName(t *testing.T) {
+	resp, err := mediaService.CheckForFileByName(context.Background(), &pbmedia.CheckForFileRequest{FileInfo: &pbcommon.File{
+		FileName:     "tester1",
+		FileLocation: "test",
+		Metadata: map[string]string{
+			"UID":  "12345",
+			"type": "video",
+		},
+	}})
+	if err != nil {
+		t.Errorf("Check should not fail")
+	}
+	if resp.GetExists() != true {
+		t.Errorf("Check should not fail")
+	}
+}
+
+func Test_ShouldFailCheckForFileByName(t *testing.T) {
+	resp, err := mediaService.CheckForFileByName(context.Background(), &pbmedia.CheckForFileRequest{FileInfo: &pbcommon.File{
+		FileName:     "fakefile123",
+		FileLocation: "fakefile123",
+		Metadata: map[string]string{
+			"UID":  "12345",
+			"type": "video",
+		},
+	}})
+	if err == nil {
+		t.Errorf("Check should err with FNF")
+	}
+	if resp.GetExists() != false {
+		t.Errorf("Check should return false")
+	}
+}
+
+func Test_ShouldGetFileByMetadata(t *testing.T) {
+	resp, err := mediaService.GetFilesWithMetadata(context.Background(), &pbmedia.GetFilesByMetadataRequest{
+		DesiredMetadata: map[string]string{
+			"type": "image",
+		},
 		Strictness: pbmedia.MetadataStrictness_STRICT,
 	})
 
 	if err != nil {
-		t.Errorf("Failed to delete files: %v", err)
+		t.Errorf("Should not get error for valid files")
 	}
 
-	checkResp, err := client.GetFilesWithMetadata(context.Background(), &pbmedia.GetFilesByMetadataRequest{
-		DesiredMetadata: meta,
+	files := resp.GetFileInfos()
+
+	if len(files) != 2 {
+		t.Errorf("Wrong number of files returned")
+	}
+
+	if files[0].FileName != "tester7" && files[0].FileName != "tester2" {
+		t.Errorf("Recieved file with wrong name")
+	}
+
+	if files[1].FileName != "tester7" && files[1].FileName != "tester2" {
+		t.Errorf("Recieved file with wrong name")
+	}
+
+}
+
+func Test_ShouldNotGetFileByMetadata(t *testing.T) {
+	resp, _ := mediaService.GetFilesWithMetadata(context.Background(), &pbmedia.GetFilesByMetadataRequest{
+		DesiredMetadata: map[string]string{
+			"type": "sdfasdfadsf",
+		},
 		Strictness: pbmedia.MetadataStrictness_STRICT,
 	})
 
+	if len(resp.GetFileInfos()) != 0 {
+		t.Errorf("Should get no files with bad metadata")
+	}
+}
+
+func Test_ShouldDeleteFileWithMetadata(t *testing.T) {
+	resp, err := mediaService.DeleteFilesWithMetaData(context.Background(), &pbmedia.DeleteFilesWithMetaDataRequest{
+		Metadata: map[string]string{
+			"deleteMe": "true",
+		},
+		Strictness: 0,
+	})
 	if err != nil {
-		t.Errorf("Failed to delete files: %v", err)
+		t.Errorf("Should get no error with good metadata")
 	}
 
-	if len(checkResp.FileInfos) > 0 {
-		t.Error("Failed to delete files")
-	}
-}
-
-func compareFileLists(l1, l2 []*pbcommon.File) bool {
-	if len(l1) != len(l2) {
-		return false
-	}
-
-	for index := range l1 {
-		if l1[index].FileName != l2[index].FileName {
-			return false
-		}
-		if l1[index].FileLocation != l2[index].FileLocation {
-			return false
-		}
-
-		for key, element := range l1[index].Metadata {
-			if val, ok := l2[index].Metadata[key]; ok {
-				if val != element {
-					return false
-				}
-			} else {
-				return false
-			}
-		}
-	}
-
-	return true
-}
-
-func TestMediaStorageServer_GetFilesWithMetadata(t *testing.T) {
-	tests := []testGetFilesWithMetadata{
-		{
-			req: &pbmedia.GetFilesByMetadataRequest{
-				DesiredMetadata: map[string]string{
-					"type": "image",
-				},
-				Strictness: pbmedia.MetadataStrictness_STRICT,
-			},
-			res: &pbmedia.GetFilesByMetadataResponse{
-				FileInfos: []*pbcommon.File{
-					{
-						FileName:     "tester2",
-						FileLocation: "test",
-						Metadata: map[string]string{
-							"UID":  "12345",
-							"type": "image",
-						},
-					},
-					{
-						FileName:     "tester7",
-						FileLocation: "test",
-						Metadata: map[string]string{
-							"UID":  "123",
-							"type": "image",
-						},
-					},
-				},
-			},
-			shouldErr: false,
-		},
-
-		{
-			req: &pbmedia.GetFilesByMetadataRequest{
-				DesiredMetadata: map[string]string{
-					"UID":  "12345",
-					"type": "image",
-				},
-				Strictness: pbmedia.MetadataStrictness_CASUAL,
-			},
-			res: &pbmedia.GetFilesByMetadataResponse{
-				FileInfos: []*pbcommon.File{
-					{
-						FileName:     "tester1",
-						FileLocation: "test",
-						Metadata: map[string]string{
-							"UID":  "12345",
-							"type": "video",
-						},
-					},
-					{
-						FileName:     "tester2",
-						FileLocation: "test",
-						Metadata: map[string]string{
-							"UID":  "12345",
-							"type": "image",
-						},
-					},
-					{
-						FileName:     "tester3",
-						FileLocation: "test",
-						Metadata: map[string]string{
-							"UID":      "12345",
-							"comments": "12",
-						},
-					},
-					{
-						FileName:     "tester7",
-						FileLocation: "test",
-						Metadata: map[string]string{
-							"UID":  "123",
-							"type": "image",
-						},
-					},
-				},
-			},
-			shouldErr: false,
-		},
-	}
-
-	for i, test := range tests {
-		resp, err := client.GetFilesWithMetadata(context.Background(), test.req)
-
-		if err == nil && test.shouldErr {
-			t.Errorf("Test %v should err but did not", i)
-		} else if err != nil {
-			t.Errorf("Test %v should not err but did: %v", i, err)
-		} else if !test.shouldErr && !compareFileLists(resp.FileInfos, test.res.FileInfos) {
-			t.Errorf("Test %v did not get the correct response\nresp: %v\ndesired: %v\n", i, resp, test.res)
-		}
+	if resp.Success != true {
+		t.Errorf("Should have deleted files with good metadata")
 	}
 }
 
-func TestMediaStorageServer_DownloadFileByName(t *testing.T) {
-
-	tests := []testUploadFile{
-		{
-			uploadPath: "Animals-Dog-icon.png",
-			checkPath:  "../../test_data/Animals-Dog-icon.png",
-			shouldErr:  false,
+func Test_ShouldNotDeleteFileWithMetadata(t *testing.T) {
+	resp, _ := mediaService.DeleteFilesWithMetaData(context.Background(), &pbmedia.DeleteFilesWithMetaDataRequest{
+		Metadata: map[string]string{
+			"deleteMe": "false",
 		},
-		{
-			uploadPath: "term.png",
-			checkPath:  "../../test_data/term.png",
-			shouldErr:  false,
-		},
+		Strictness: 0,
+	})
+
+	if resp.Success != true {
+		t.Errorf("Should have no deleted files with bad metadata")
 	}
-
-	for i, test := range tests {
-		stream, err := client.DownloadFileByName(context.Background(), &pbmedia.DownloadFileRequest{FileInfo: &pbcommon.File{
-			FileName: test.uploadPath,
-		}})
-
-		if err != nil {
-			t.Errorf("Test %v download file failure: %v", i, err)
-		}
-
-		var buf []byte
-		buff := bytes.NewBuffer(buf)
-
-		for {
-			recv, err := stream.Recv()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				t.Errorf("Test %v download file failure: %v", i, err)
-			}
-			buff.Write(recv.GetChunk())
-		}
-
-		fo, err := os.Open(test.checkPath)
-		if err != nil {
-			t.Errorf("Test %v download file failure: %v", i, err)
-		}
-		rec, err := ioutil.ReadAll(fo)
-		if err != nil {
-			t.Errorf("Test %v upload file failure: %v", i, err)
-		}
-
-		if bytes.Compare(buff.Bytes(), rec) != 0 {
-			t.Errorf("Test %v download file failure", i)
-		}
-	}
-}
-
-func TestMediaStorageServer_UploadFile(t *testing.T) {
-	testFiles := []*pbcommon.File{
-		&pbcommon.File{
-			FileName:     "Animals-Dog-icon.png",
-			FileLocation: "../../test_data/Animals-Dog-icon.png",
-			Metadata:     nil,
-			DateStored:   &pbcommon.Date{
-				Year:  2021,
-				Month: 4,
-				Day:   12,
-			},
-		},
-
-		&pbcommon.File{
-			FileName:     "term.png",
-			FileLocation: "../../test_data/term.png",
-			Metadata:     nil,
-			DateStored:   &pbcommon.Date{
-				Year:  2021,
-				Month: 4,
-				Day:   12,
-			},
-		},
-	}
-
-
-
-	for i, test := range testFiles {
-		resp, err := sendFile(test, test.FileLocation)
-		if err != nil || resp.BytesRead == 0 {
-			t.Errorf("Test %v upload file failure", i)
-		}
-		fi, err := os.Open(test.FileLocation)
-		if err != nil {
-			t.Errorf("Test %v upload file failure: %v", i, err)
-		}
-		fo, err := os.Open(test.FileLocation)
-		if err != nil {
-			t.Errorf("Test %v upload file failure: %v", i, err)
-		}
-		sent, err := ioutil.ReadAll(fi)
-		if err != nil {
-			t.Errorf("Test %v upload file failure: %v", i, err)
-		}
-		rec, err := ioutil.ReadAll(fo)
-		if err != nil {
-			t.Errorf("Test %v upload file failure: %v", i, err)
-		}
-
-		if bytes.Compare(sent, rec) != 0 {
-			t.Errorf("Test %v upload file failure", i)
-		}
-	}
-}
-
-func sendFile(fileInfo *pbcommon.File, uploadName string) (*pbmedia.UploadFileResponse, error) {
-	file, err := os.Open(fileInfo.FileLocation)
-	if err != nil {
-		log.Fatal("cannot open file: ", err)
-	}
-	defer file.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	fileBytes, err := ioutil.ReadFile(fileInfo.FileLocation)
-
-	req := &pbmedia.UploadFileRequest{
-		FileInfo: fileInfo,
-		File:     fileBytes,
-	}
-
-	res, err := client.UploadFile(ctx, req)
-	if err != nil {
-		log.Fatal("cannot upload file: ", err)
-	}
-
-
-	return res, err
 }
