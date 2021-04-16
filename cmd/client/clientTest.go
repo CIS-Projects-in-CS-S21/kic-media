@@ -9,43 +9,18 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	pbcommon "github.com/kic/media/pkg/proto/common"
+	pbmedia "github.com/kic/media/pkg/proto/media"
+	pbusers "github.com/kic/media/pkg/proto/users"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-
-	pbcommon "github.com/kic/media/pkg/proto/common"
-	pbmedia "github.com/kic/media/pkg/proto/media"
-	pbusers "github.com/kic/media/pkg/proto/users"
 )
 
-func main() {
-	conn, err := grpc.Dial("test.api.keeping-it-casual.com:50051", grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("fail to dial: %v", err)
-	}
-	defer conn.Close()
-	client := pbmedia.NewMediaStorageClient(conn)
-
-
-	// User client for auth
-
-	usersClient := pbusers.NewUsersClient(conn)
-
-	// get JWT
-	tokRes, err := usersClient.GetJWTToken(context.Background(), &pbusers.GetJWTTokenRequest{
-		Username: "testuser",
-		Password: "testpass",
-	})
-
-	// creating auth context
-	md := metadata.Pairs("Authorization", fmt.Sprintf("Bearer %v", tokRes.Token))
-	authCtx := metadata.NewOutgoingContext(context.Background(), md)
-
-	// -----------------
-
+func shouldCheckForFile(authCtx context.Context, client pbmedia.MediaStorageClient) {
 	in := &pbmedia.CheckForFileRequest{
 		FileInfo: &pbcommon.File{
 			FileName:     "testerino",
@@ -55,15 +30,23 @@ func main() {
 	}
 	res, err := client.CheckForFileByName(authCtx, in)
 
-	fmt.Printf("res: %v\nerr: %v\n", res, err)
+	if err != nil {
+		log.Fatalf("Failed to check for file with: %v", err)
+	}
 
+	if res.Exists != true {
+		log.Fatalf("Got improper response in check for file")
+	}
 
+	log.Printf("shouldCheckForFile Success")
+}
+
+func shouldUploadFile(authCtx context.Context, client pbmedia.MediaStorageClient) {
 	buffer, err := ioutil.ReadFile("Makefile")
 
 	if err != nil {
 		log.Fatal("cannot read file: ", err)
 	}
-
 
 	req := &pbmedia.UploadFileRequest{
 		FileInfo: &pbcommon.File{
@@ -76,9 +59,8 @@ func main() {
 				"adg": "912",
 			},
 		},
-		File: buffer,
+		FileURI: string(buffer),
 	}
-
 
 	resp, err := client.UploadFile(authCtx, req)
 
@@ -86,9 +68,14 @@ func main() {
 		log.Fatal("cannot upload image: ", err)
 	}
 
+	if resp.BytesRead != 538 {
+		log.Fatalf("Reported %v bytes but should be 538", resp.BytesRead)
+	}
 
-	log.Printf("image uploaded with id: %s, size: %d", resp.FileID, resp.BytesRead)
+	log.Printf("shouldUploadFile Success")
+}
 
+func shouldDownloadFile(authCtx context.Context, client pbmedia.MediaStorageClient) {
 	dlStream, err := client.DownloadFileByName(authCtx, &pbmedia.DownloadFileRequest{
 		FileInfo: &pbcommon.File{
 			FileName: "Makefile",
@@ -110,7 +97,7 @@ func main() {
 		if err != nil {
 			log.Fatal("cannot receive response in download: ", err)
 		}
-		buff.Write(recv.GetChunk())
+		buff.Write([]byte(recv.GetChunk()))
 	}
 
 	fi, err := os.Create("test_data/Makefile")
@@ -124,11 +111,14 @@ func main() {
 
 	writer.Flush()
 
-	log.Printf("wrote %v bytes", n)
+	if n != 538 {
+		log.Fatalf("Reported %v bytes but should be 538", n)
+	}
 
-	// Updating files --------------------
+	log.Printf("shouldDownloadFile Success")
+}
 
-	// creating update request
+func shouldUpdateFile(authCtx context.Context, client pbmedia.MediaStorageClient) {
 	updateReq := &pbmedia.UpdateFilesWithMetadataRequest{
 		Strictness: pbmedia.MetadataStrictness_CASUAL,
 		UpdateFlag: pbmedia.UpdateFlag_OVERWRITE,
@@ -146,15 +136,18 @@ func main() {
 		log.Fatal("could not update file: ", err)
 	}
 
-	fmt.Printf("Update res: %v\nUpdate err: %v\n", updateRes, err)
-	// ------------------------------------
+	if updateRes.NumFilesUpdated != 1 {
+		log.Fatalf("Got %v files updated by should be 1", updateRes.NumFilesUpdated)
+	}
 
-	// Deleting files -----------------------
+	log.Printf("shouldUpdateFile Success")
+}
 
+func shouldDeleteFile(authCtx context.Context, client pbmedia.MediaStorageClient) {
 	deleteReq := &pbmedia.DeleteFilesWithMetaDataRequest{Metadata: map[string]string{
 		"rsc": "42",
 	},
-	Strictness: pbmedia.MetadataStrictness_CASUAL,
+		Strictness: pbmedia.MetadataStrictness_CASUAL,
 	}
 
 	deleteRes, err := client.DeleteFilesWithMetaData(authCtx, deleteReq)
@@ -162,10 +155,39 @@ func main() {
 		log.Fatal("could not delete file: ", err)
 	}
 
-	log.Printf("Delete res: %v\nDelete err: %v\n", deleteRes, err)
+	if deleteRes.Success != true {
+		log.Fatal("Failed to delete file")
+	}
 
-	// --------------------------------------
+	log.Printf("shouldDeleteFile Success")
+}
 
+func main() {
+	conn, err := grpc.Dial("test.api.keeping-it-casual.com:50051", grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("fail to dial: %v", err)
+	}
+	defer conn.Close()
+	client := pbmedia.NewMediaStorageClient(conn)
 
+	// User client for auth
+
+	usersClient := pbusers.NewUsersClient(conn)
+
+	// get JWT
+	tokRes, err := usersClient.GetJWTToken(context.Background(), &pbusers.GetJWTTokenRequest{
+		Username: "testuser",
+		Password: "testpass",
+	})
+
+	// creating auth context
+	md := metadata.Pairs("Authorization", fmt.Sprintf("Bearer %v", tokRes.Token))
+	authCtx := metadata.NewOutgoingContext(context.Background(), md)
+
+	shouldCheckForFile(authCtx, client)
+	shouldUploadFile(authCtx, client)
+	shouldDownloadFile(authCtx, client)
+	shouldUpdateFile(authCtx, client)
+	shouldDeleteFile(authCtx, client)
 
 }

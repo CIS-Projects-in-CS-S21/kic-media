@@ -50,8 +50,6 @@ func (m *MediaStorageServer) UploadFile(ctx context.Context, req *pbmedia.Upload
 	m.logger.Debugf("FileLocation: %v", fileInfo.FileLocation)
 	m.logger.Debugf("Metadata: %v", fileInfo.Metadata)
 
-
-
 	data := bytes.Buffer{}
 
 	file := req.GetFileURI()
@@ -191,8 +189,7 @@ func (m *MediaStorageServer) UpdateFilesWithMetadata(
 
 	// If error, return empty response and err
 	if err != nil {
-		return &pbmedia.UpdateFilesWithMetadataResponse{
-		}, status.Errorf(codes.Internal, "Error updating file metadata")
+		return &pbmedia.UpdateFilesWithMetadataResponse{}, status.Errorf(codes.Internal, "Error updating file metadata")
 	}
 
 	res := &pbmedia.UpdateFilesWithMetadataResponse{NumFilesUpdated: 1}
